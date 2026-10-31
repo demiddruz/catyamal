@@ -662,18 +662,18 @@ function startLevel(level) {
   G = {
     level, world: w, liw, who, t: 0, result: null, resultT: 0, boyScale, hits,
     runner: { x: 150, y: H / 2, r: 24, speed: 235, vx: 0, vy: 0, legT: 0, back: false, inv: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
-    boss: liw === LEVELS_PER_WORLD && who === 'cat', // последний уровень мира: мальчик-босс с автоматом
-    monster: { r: 22 + Math.min(10, w * 2), speed: Math.min(205, 118 + level * 0.5 + w * 8), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
+    boss: liw === LEVELS_PER_WORLD, // последний уровень мира: босс с автоматом и 5 сердцами (мальчик или кот — кто гонится)
+    monster: { r: 22 + Math.min(10, w * 2), speed: Math.min(210, 124 + level * 0.6 + w * 8), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
     obstacles: [], coins: [], bullets: [], mBullets: [], spitT: 5, task: null, charged: false, taskN: 0,
     shield: { on: 0, cd: 0 }, meowT: 2, particles: [], introT: 3.2,
   };
   const nseg = 9 + w * 2; for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 14, y: H / 2 });
   if (G.boss) { G.monster.hp = G.monster.maxHp = Math.round(hp * 1.5); G.monster.dmg = Math.ceil(G.monster.maxHp / 7); G.monster.speed = Math.min(170, G.monster.speed * 0.8); G.monster.r = 30; G.burstT = 3; G.burstLeft = 0; }
   // препятствия
-  const n = Math.min(16, 4 + w + Math.floor(liw / 3) + Math.floor(R() * 4) - 1); // с каждым уровнем больше, с разбросом
+  const n = Math.min(22, 6 + w + Math.floor(liw / 2.5) + Math.floor(R() * 4) - 1); // с каждым уровнем больше, с разбросом
   for (let i = 0; i < n; i++) {
     for (let tries = 0; tries < 40; tries++) {
-      const kr = R(), kind = kr < 0.25 ? 'pool' : kr < 0.4 ? 'rock' : kr < 0.55 ? 'mud' : kr < 0.7 ? 'fence' : 'wall';
+      const kr = R(), kind = kr < 0.22 ? 'pool' : kr < 0.36 ? 'rock' : kr < 0.5 ? 'mud' : kr < 0.64 ? 'fence' : kr < 0.8 ? 'thorns' : 'wall';
       const o = kind === 'fence' ? { x: 90 + R() * (W - 300), y: 70 + R() * (H - 200), w: 120 + R() * 120, h: 14, kind } : kind === 'rock' ? { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 44 + R() * 30, h: 40 + R() * 24, kind } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 50 + R() * 110, h: 40 + R() * 90, kind };
       if (circleRect({ x: 150, y: H / 2, r: 110 }, o) || circleRect({ x: W - 150, y: H / 2, r: 140 }, o)) continue;
       if (G.obstacles.some(q => o.x < q.x + q.w + 26 && o.x + o.w + 26 > q.x && o.y < q.y + q.h + 26 && o.y + o.h + 26 > q.y)) continue;
@@ -694,7 +694,7 @@ function freeSpot(R, r) {
   return { x: W / 2, y: 80, r };
 }
 function circleRect(c, o, pad = 0) { const cx = clamp(c.x, o.x - pad, o.x + o.w + pad), cy = clamp(c.y, o.y - pad, o.y + o.h + pad); return Math.hypot(c.x - cx, c.y - cy) < c.r; }
-function pushOut(c) { for (const o of G.obstacles) { if (o.kind === 'mud' || (o.kind === 'pool' && c === G.runner && (c.dirty || c.swim > 0)) || !circleRect(c, o)) continue; const cx = clamp(c.x, o.x, o.x + o.w), cy = clamp(c.y, o.y, o.y + o.h); let dx = c.x - cx, dy = c.y - cy, d = Math.hypot(dx, dy); if (d < 0.01) { dx = 1; dy = 0; d = 1; } c.x = cx + dx / d * c.r; c.y = cy + dy / d * c.r; } c.x = clamp(c.x, c.r, W - c.r); c.y = clamp(c.y, 50 + c.r, H - c.r); }
+function pushOut(c) { for (const o of G.obstacles) { if (o.kind === 'mud' || o.kind === 'thorns' || (o.kind === 'pool' && c === G.runner && (c.dirty || c.swim > 0)) || !circleRect(c, o)) continue; const cx = clamp(c.x, o.x, o.x + o.w), cy = clamp(c.y, o.y, o.y + o.h); let dx = c.x - cx, dy = c.y - cy, d = Math.hypot(dx, dy); if (d < 0.01) { dx = 1; dy = 0; d = 1; } c.x = cx + dx / d * c.r; c.y = cy + dy / d * c.r; } c.x = clamp(c.x, c.r, W - c.r); c.y = clamp(c.y, 50 + c.r, H - c.r); }
 
 const TASKS = ['collect', 'rings', 'mouse', 'buttons'];
 function newTask(R) {
@@ -760,6 +760,8 @@ function update(dt) {
     } else if (r.swim > 0) { r.swim = 0; r.dirty = false; say('Чистый!', r.x, r.y - 62, '#7CFC9A', 0.8); }
   }
   if (dl > 0.1) { r.legT += dt * 14; r.back = dy < -0.5; if (Math.abs(dx) > 0.2) r.flip = dx < 0; }
+  { G.thornT = Math.max(0, (G.thornT || 0) - dt); const th = G.obstacles.find(o => o.kind === 'thorns' && circleRect(r, o, -8));
+    if (th && G.thornT <= 0 && !(r.swim > 0)) { G.thornT = 0.8; r.hp = Math.max(0, r.hp - 5); SFX.hit(); shake = 0.1; say('-5 ⚡ колючки!', r.x, r.y - 60, '#c6ff4a', 0.8); if (r.hp <= 0) { if (!loseLife()) return; } } }
   r.inv = Math.max(0, r.inv - dt);
   // монстр ползёт
   m.stun = Math.max(0, m.stun - dt); m.roarT = Math.max(0, m.roarT - dt);
@@ -771,13 +773,13 @@ function update(dt) {
     let ax = tgt.x - head.x, ay = tgt.y - head.y; const d = Math.hypot(ax, ay) || 1; ax /= d; ay /= d;
     const spd = m.speed * (G.truce > 0 ? 0.45 : 1) * (G.obstacles.some(o => o.kind === 'mud' && circleRect(head, o)) ? 0.55 : 1);
     const nx = head.x + ax * spd * dt, ny = head.y + ay * spd * dt, test = { x: nx, y: ny, r: m.r + 2 };
-    const block = G.obstacles.find(o => o.kind !== 'mud' && circleRect(test, o));
+    const block = G.obstacles.find(o => o.kind !== 'mud' && o.kind !== 'thorns' && circleRect(test, o));
     m.sideT = Math.max(0, (m.sideT || 0) - dt);
     if (!block) { head.x = nx; head.y = ny; m.sideT = 0; }
     else { // обходим препятствие вдоль его края, сторону выбираем по ближнему краю и держим полсекунды
       if (m.sideT <= 0) { const cx = block.x + block.w / 2, cy = block.y + block.h / 2, px = -ay, py = ax; m.side = ((head.x - cx) * px + (head.y - cy) * py) >= 0 ? 1 : -1; m.sideT = 0.5; }
       const px = -ay * m.side, py = ax * m.side, t2 = { x: head.x + px * spd * dt, y: head.y + py * spd * dt, r: m.r + 2 };
-      if (!G.obstacles.some(o => o.kind !== 'mud' && circleRect(t2, o))) { head.x = t2.x; head.y = t2.y; }
+      if (!G.obstacles.some(o => o.kind !== 'mud' && o.kind !== 'thorns' && circleRect(t2, o))) { head.x = t2.x; head.y = t2.y; }
       else { m.side = -m.side; m.sideT = 0.5; head.x -= ax * m.speed * dt * 0.5; head.y -= ay * m.speed * dt * 0.5; }
     }
     pushOut(head);
@@ -789,7 +791,7 @@ function update(dt) {
   if (G.who === 'cat' || true) { G.meowT -= dt; if (G.meowT <= 0) { G.meowT = 2.5 + Math.random() * 2.5; SFX.meow(); const c = G.who === 'cat' ? r : head; say('МЯЯЯУ!', c.x, c.y - 55, '#fff', 0.9); } }
   // щит
   G.shield.cd = Math.max(0, G.shield.cd - dt); G.shield.on = Math.max(0, G.shield.on - dt);
-  if (G.shield.on > 0 && m.stun <= 0 && dist(r, head) < 42 + m.r) { hurt(1.2); const d = dist(r, head) || 1; head.x += (head.x - r.x) / d * 70; head.y += (head.y - r.y) / d * 70; pushOut(head); }
+  if (G.shield.on > 0 && m.stun <= 0 && dist(r, head) < 42 + m.r) { m.stun = Math.max(m.stun, 0.5); say('Щит!', r.x, r.y - 60, '#9ad6ff', 0.6); const d = dist(r, head) || 1; head.x += (head.x - r.x) / d * 70; head.y += (head.y - r.y) / d * 70; pushOut(head); }
   G.truce = Math.max(0, (G.truce || 0) - dt);
   const peace = (G.treat && G.treat.shown && !G.treat.got && !G.treat.eaten) || G.truce > 0; // гонка или перемирие после неё
   // босс стреляет очередями из автомата
@@ -802,7 +804,7 @@ function update(dt) {
   // гусеница плюётся
   G.spitT -= dt;
   if (!G.boss && G.spitT <= 0 && m.stun <= 0 && !peace) {
-    G.spitT = Math.max(3.5, 7 - G.level * 0.05); const d = dist(r, head) || 1;
+    G.spitT = Math.max(3.2, 6.5 - G.level * 0.05); const d = dist(r, head) || 1;
     if (d < 520) { G.mBullets.push({ x: head.x, y: head.y, vx: (r.x - head.x) / d * 260, vy: (r.y - head.y) / d * 260, r: 8 }); SFX.shot(); say('ТЬФУ!', head.x, head.y - m.r - 30, '#9fe08a', 0.7); }
   }
   for (const b of G.mBullets) {
@@ -818,7 +820,7 @@ function update(dt) {
   if (m.hp <= 0 && !G.result) { G.result = 'win'; SFX.win(); return; }
   // монстр кусает: чуть задел — 5 энергии, наполовину — 50, залетел целиком — 100 (съел)
   const dd = dist(r, head), overlap = (r.r + m.r - dd) / (r.r + m.r);
-  if (m.stun <= 0 && r.inv <= 0 && overlap > 0.05 && !peace && !(r.swim > 0)) {
+  if (m.stun <= 0 && r.inv <= 0 && G.shield.on <= 0 && overlap > 0.05 && !peace && !(r.swim > 0)) {
     const bite = overlap < 0.3 ? 5 : overlap < 0.65 ? 50 : 100;
     if (r.armor > 0) { r.armor = 0; r.inv = 1.6; m.stun = 1; say('Броня спасла!', r.x, r.y - 60, '#9ad6ff'); SFX.hit(); shake = 0.3; }
     else {
@@ -911,6 +913,7 @@ function drawObstacle(o, w) {
   if (o.kind === 'pool') { ctx.fillStyle = '#ffffffaa'; ctx.beginPath(); rr(o.x - 6, o.y - 6, o.w + 12, o.h + 12, 10); ctx.fill(); ctx.fillStyle = Wd.pool; ctx.beginPath(); rr(o.x, o.y, o.w, o.h, 8); ctx.fill(); ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2; const t = performance.now() / 600; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(o.x + 10, o.y + o.h * (0.25 + i * 0.25) + Math.sin(t + i) * 3); ctx.quadraticCurveTo(o.x + o.w / 2, o.y + o.h * (0.25 + i * 0.25) + Math.cos(t + i) * 5, o.x + o.w - 10, o.y + o.h * (0.25 + i * 0.25)); ctx.stroke(); } }
   else if (o.kind === 'rock') { ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2 + 4, o.y + o.h / 2 + 8, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#8d9096'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#b4b7bd'; ctx.beginPath(); ctx.ellipse(o.x + o.w * 0.4, o.y + o.h * 0.35, o.w * 0.25, o.h * 0.18, -0.4, 0, 7); ctx.fill(); ctx.fillStyle = '#6a6d73'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h * 0.8, o.w * 0.42, o.h * 0.14, 0, 0, 7); ctx.fill(); }
   else if (o.kind === 'mud') { ctx.fillStyle = '#6b4a2b'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#7d5a36'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(o.x + o.w * (0.25 + (i % 2) * 0.5), o.y + o.h * (0.3 + Math.floor(i / 2) * 0.4), o.w * 0.14, o.h * 0.1, 0, 0, 7); ctx.fill(); } }
+  else if (o.kind === 'thorns') { ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2 + 3, o.y + o.h / 2 + 6, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#2f6b2a'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#3f8f3a'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(o.x + o.w * (0.2 + (i % 3) * 0.3), o.y + o.h * (0.3 + Math.floor(i / 3) * 0.4), o.w * 0.14, o.h * 0.16, 0, 0, 7); ctx.fill(); } ctx.strokeStyle = '#e8e2c8'; ctx.lineWidth = 2; const R2 = rng(o.x * 31 + o.y); for (let i = 0; i < 10; i++) { const a = R2() * 6.28, rx = o.w / 2 * 0.85, ry = o.h / 2 * 0.85, px = o.x + o.w / 2 + Math.cos(a) * rx * (0.3 + R2() * 0.7), py = o.y + o.h / 2 + Math.sin(a) * ry * (0.3 + R2() * 0.7); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a) * 7, py + Math.sin(a) * 7); ctx.stroke(); } }
   else if (o.kind === 'fence') { ctx.fillStyle = '#0003'; ctx.fillRect(o.x + 3, o.y + 6, o.w, o.h); ctx.fillStyle = '#c89b5a'; ctx.fillRect(o.x, o.y + 3, o.w, 5); ctx.fillRect(o.x, o.y + o.h - 4, o.w, 4); for (let px = o.x; px < o.x + o.w; px += 18) { ctx.fillStyle = '#b5864a'; ctx.fillRect(px, o.y - 6, 7, o.h + 10); ctx.fillStyle = '#d4a86a'; tri(px, o.y - 6, px + 7, o.y - 6, px + 3.5, o.y - 11); } }
   else { ctx.fillStyle = '#0003'; ctx.beginPath(); rr(o.x + 4, o.y + 8, o.w, o.h, 6); ctx.fill(); ctx.fillStyle = Wd.wall; ctx.beginPath(); rr(o.x, o.y, o.w, o.h, 6); ctx.fill(); ctx.strokeStyle = '#0004'; ctx.lineWidth = 2; ctx.stroke(); if (w === 0) { ctx.fillStyle = '#3f8f3a'; for (let i = 0; i < o.w; i += 22) { ctx.beginPath(); ctx.arc(o.x + i + 10, o.y + 2, 12, 0, 7); ctx.fill(); } } }
 }
@@ -969,6 +972,17 @@ function drawGame() {
   const drawMonster = () => {
     if (!G.boss) return drawCaterpillar(m, G.who === 'cat' ? 'boy' : 'cat');
     const sc = G.boyScale * 1.35, ang = Math.atan2(r.y - head.y, r.x - head.x), flip = r.x < head.x;
+    if (G.who === 'boy') { // кот-босс с автоматом
+      if (m.stun > 0) { ctx.save(); ctx.translate(head.x, head.y + 10); ctx.rotate(flip ? -1.3 : 1.3); drawCat(0, 0, 1.15, { legT: 0, flip }); ctx.restore(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; for (const sd of [-1, 1]) { const ex = head.x + sd * 10, ey = head.y - 20; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 5); ctx.lineTo(ex + 5, ey + 5); ctx.moveTo(ex + 5, ey - 5); ctx.lineTo(ex - 5, ey + 5); ctx.stroke(); } return; }
+      drawCat(head.x, head.y + 10, 1.15, { legT: m.legT = (m.legT || 0) + 0.25, flip });
+      ctx.save(); ctx.translate(head.x, head.y - 2); ctx.rotate(ang); if (flip) ctx.scale(1, -1);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
+      if (G.flash > 0) { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.moveTo(42, -2); ctx.lineTo(60, -9); ctx.lineTo(52, 0); ctx.lineTo(60, 8); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+      text('БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
+      { const per = m.maxHp / 5; for (let i = 0; i < 5; i++) { const full = m.hp > i * per + per * 0.5, half = !full && m.hp > i * per; text(full ? '❤' : half ? '💔' : '♡', head.x - 48 + i * 24, head.y - m.r - 58, 20, full || half ? '#ff4d6d' : '#ffffff66'); } }
+      return;
+    }
     if (m.stun > 0) { ctx.save(); ctx.translate(head.x, head.y + 20); ctx.rotate(flip ? -1.3 : 1.3); drawBoy(0, 0, sc, { mouth: 0.1, legT: 0 }); ctx.restore(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; for (const sd of [-1, 1]) { const ex = head.x + sd * 10, ey = head.y - 20; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 5); ctx.lineTo(ex + 5, ey + 5); ctx.moveTo(ex + 5, ey - 5); ctx.lineTo(ex - 5, ey + 5); ctx.stroke(); } return; }
     drawBoy(head.x, head.y + 20, sc, { mouth: G.burstLeft > 0 ? 0.8 : 0.3, legT: m.legT = (m.legT || 0) + 0.25, back: false });
     // автомат в руках, направлен на Ника
@@ -995,7 +1009,7 @@ function drawGame() {
   // хп монстра
   const hx = head.x - 45, hy = head.y - m.r - 50;
   if (!G.boss) { ctx.fillStyle = '#0008'; ctx.beginPath(); rr(hx, hy, 90, 12, 6); ctx.fill(); ctx.fillStyle = '#e63946'; ctx.beginPath(); rr(hx, hy, Math.max(4, 90 * m.hp / m.maxHp), 12, 6); ctx.fill(); text(`${m.hp}`, head.x, hy - 4, 13); }
-  if (!G.boss) { const full = Math.max(3.5, 7 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(k >= 1 ? 'плевок готов' : 'плевок заряжается', head.x, hy + 31, 10, '#dfe'); }
+  if (!G.boss) { const full = Math.max(3.2, 6.5 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(k >= 1 ? 'плевок готов' : 'плевок заряжается', head.x, hy + 31, 10, '#dfe'); }
   ctx.restore();
   // HUD
   ctx.fillStyle = 'rgba(20,24,48,0.75)'; ctx.fillRect(0, 0, W, 48);
@@ -1016,7 +1030,7 @@ function drawGame() {
     ctx.globalAlpha = clamp(4 - G.t, 0, 1);
     panel(W / 2 - 330, 60, 660, 118, 'rgba(20,24,48,0.9)');
     text('ЦЕЛЬ УРОВНЯ', W / 2, 90, 20, '#ffe08a');
-    text(G.boss ? 'БОСС! Мальчик с автоматом. Выполняй задания, заряжай пушку и стреляй, уворачивайся от очередей.' : G.who === 'cat' ? 'Выполняй задания — заряжается пушка. Стреляй в мальчика-гусеницу, пока не кончится его здоровье.' : 'Выполняй задания — заряжается мяч. Бей по коту-гусенице и закрывайся щитом, пока не кончится его здоровье.', W / 2, 120, 15, '#fff', 'center', false);
+    text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом. Выполняй задания, заряжай пушку и стреляй, уворачивайся от очередей.' : 'БОСС! Кот с автоматом. Выполняй задания, заряжай мяч и бей, от очередей закрывайся щитом.') : G.who === 'cat' ? 'Выполняй задания — заряжается пушка. Стреляй в мальчика-гусеницу, пока не кончится его здоровье.' : 'Выполняй задания — заряжается мяч. Бей по коту-гусенице и закрывайся щитом, пока не кончится его здоровье.', W / 2, 120, 15, '#fff', 'center', false);
     text('Гусеница кусается и плюётся — это отнимает энергию. Кончилась энергия — съели!', W / 2, 145, 15, '#ff9f9f', 'center', false);
     text('Грязь пачкает: грязный может прыгнуть в воду, помыться 3 секунды и вылететь. Чистого вода не пускает.', W / 2, 168, 13, '#bbb', 'center', false);
     ctx.globalAlpha = 1;
