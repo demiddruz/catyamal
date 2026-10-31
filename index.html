@@ -624,17 +624,20 @@ function energyBar(x, y, w, who, label) {
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
+const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 58 }; // виртуальный джойстик: появляется там, где палец коснулся поля
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
 cv.addEventListener('pointerdown', e => {
-  ac(); const p = toCanvas(e); pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.id = e.pointerId; cv.setPointerCapture(e.pointerId);
+  ac(); const p = toCanvas(e);
+  if (screen === 'game' && G && !G.result && !hitBtn(p.x, p.y) && joy.id === null) { joy.id = e.pointerId; joy.bx = joy.x = p.x; joy.by = joy.y = p.y; joy.t0 = performance.now(); cv.setPointerCapture(e.pointerId); return; } // палец на поле — джойстик
+  pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.id = e.pointerId; cv.setPointerCapture(e.pointerId);
   pointer.sy = p.y; pointer.moved = 0; pointer.t0 = performance.now();
-  if (screen === 'game' && G && !G.result && !hitBtn(p.x, p.y)) dash(); // тап — рывок
   const b = hitBtn(p.x, p.y);
   if (b && b.instant) { pointer.btn = { x: -1, y: -1, w: 0, h: 0, cb: () => {} }; lastFire = performance.now(); b.cb(); return; }
   if (b) { pointer.btn = b; } else { pointer.btn = null; if (screen === 'sandbox') sandboxPaint(p.x, p.y); }
 });
-cv.addEventListener('pointermove', e => { if (e.pointerId !== pointer.id && pointer.id !== null) return; const p = toCanvas(e); if (pointer.down) { pointer.moved = (pointer.moved || 0) + Math.abs(p.y - pointer.y) + Math.abs(p.x - pointer.x); if (screen === 'map') mapScroll -= p.y - pointer.y; } pointer.x = p.x; pointer.y = p.y; if (pointer.down && screen === 'sandbox' && !pointer.btn) sandboxPaint(p.x, p.y); });
+cv.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { const q = toCanvas(e); joy.x = q.x; joy.y = q.y; const d = Math.hypot(joy.x - joy.bx, joy.y - joy.by); if (d > joy.R) { joy.bx += (joy.x - joy.bx) * (d - joy.R) / d; joy.by += (joy.y - joy.by) * (d - joy.R) / d; } return; } if (e.pointerId !== pointer.id && pointer.id !== null) return; const p = toCanvas(e); if (pointer.down) { pointer.moved = (pointer.moved || 0) + Math.abs(p.y - pointer.y) + Math.abs(p.x - pointer.x); if (screen === 'map') mapScroll -= p.y - pointer.y; } pointer.x = p.x; pointer.y = p.y; if (pointer.down && screen === 'sandbox' && !pointer.btn) sandboxPaint(p.x, p.y); });
 cv.addEventListener('pointerup', e => {
+  if (e.pointerId === joy.id) { if (performance.now() - joy.t0 < 220 && Math.hypot(joy.x - joy.bx, joy.y - joy.by) < 10) dash(); joy.id = null; return; } // короткий тап по полю — рывок
   const p = toCanvas(e); pointer.down = false; pointer.id = null; pointer.who = undefined;
   if (screen === 'menu' && menuCatHit && !pointer.btn && (pointer.moved || 0) < 12 && performance.now() - (pointer.t0 || 0) < 250 && p.x >= menuCatHit.x && p.x <= menuCatHit.x + menuCatHit.w && p.y >= menuCatHit.y && p.y <= menuCatHit.y + menuCatHit.h) { catEyesOpen = !catEyesOpen; SFX.meow(); say(catEyesOpen ? 'Ник открыл глаза!' : 'Ник зажмурился', menuCat.x, menuCat.y - 70, '#fff'); }
   const b = hitBtn(p.x, p.y); if (b && pointer.btn && (pointer.moved || 0) < 12 && b.x === pointer.btn.x && b.y === pointer.btn.y && b.w === pointer.btn.w) { lastFire = performance.now(); b.cb(); } pointer.btn = null;
@@ -644,7 +647,7 @@ let lastFire = 0;
 // страховка: если pointerup потерялся (первый клик по панели и т.п.), срабатываем по click
 cv.addEventListener('click', e => { if (performance.now() - lastFire < 400) return; const p = toCanvas(e), b = hitBtn(p.x, p.y); if (b && screen !== 'sandbox') { lastFire = performance.now(); b.cb(); } });
 cv.addEventListener('wheel', e => { if (screen === 'map') { mapScroll += e.deltaY; e.preventDefault(); } }, { passive: false });
-cv.addEventListener('pointercancel', () => { pointer.down = false; pointer.id = null; pointer.btn = null; });
+cv.addEventListener('pointercancel', e => { if (e.pointerId === joy.id) { joy.id = null; return; } pointer.down = false; pointer.id = null; pointer.btn = null; });
 
 // ───────────────────────── игра ─────────────────────────
 let screen = 'menu', G = null, msg = [], shake = 0, catEyesOpen = false;
@@ -696,18 +699,42 @@ function freeSpot(R, r) {
 function circleRect(c, o, pad = 0) { const cx = clamp(c.x, o.x - pad, o.x + o.w + pad), cy = clamp(c.y, o.y - pad, o.y + o.h + pad); return Math.hypot(c.x - cx, c.y - cy) < c.r; }
 function pushOut(c) { for (const o of G.obstacles) { if (o.kind === 'mud' || o.kind === 'thorns' || o.kind === 'spikes' || (o.kind === 'pool' && c === G.runner && (c.dirty || c.swim > 0)) || !circleRect(c, o)) continue; const cx = clamp(c.x, o.x, o.x + o.w), cy = clamp(c.y, o.y, o.y + o.h); let dx = c.x - cx, dy = c.y - cy, d = Math.hypot(dx, dy); if (d < 0.01) { dx = 1; dy = 0; d = 1; } c.x = cx + dx / d * c.r; c.y = cy + dy / d * c.r; } c.x = clamp(c.x, c.r, W - c.r); c.y = clamp(c.y, 50 + c.r, H - c.r); }
 
-const TASKS = ['collect', 'rings', 'mouse', 'buttons'];
+const TASKS = ['collect', 'rings', 'maze', 'mouse', 'simon', 'buttons', 'key', 'color'];
+const SIMON_COLS = ['#e63946', '#2ecc71', '#3b82f6', '#ffd700'], BALL_COLS = ['#e63946', '#2ecc71', '#3b82f6'], BALL_NAMES = ['красных', 'зелёных', 'синих'];
+function buildMaze(R) { // лабиринт 5×5 из кирпичных стенок; вход слева снизу, флажок в самой дальней клетке
+  const n = 5, c = 66, t = 8, size = n * c + t, ox = Math.round(260 + R() * Math.max(10, W - 260 - 230 - size)), oy = Math.round(70 + R() * Math.max(10, H - 70 - 60 - size));
+  const region = { x: ox - 30, y: oy - 30, w: size + 60, h: size + 60 };
+  G.obstacles = G.obstacles.filter(o => !(o.x < region.x + region.w && o.x + o.w > region.x && o.y < region.y + region.h && o.y + o.h > region.y)); // освобождаем место
+  const vis = [], vw = [], hw = []; // vw[i][j] — стенка справа от клетки, hw[i][j] — снизу
+  for (let i = 0; i < n; i++) { vis.push(Array(n).fill(false)); vw.push(Array(n).fill(true)); hw.push(Array(n).fill(true)); }
+  const stack = [[0, n - 1]]; vis[0][n - 1] = true;
+  while (stack.length) { const [i, j] = stack[stack.length - 1]; const nb = [[i + 1, j, 'v', i, j], [i - 1, j, 'v', i - 1, j], [i, j + 1, 'h', i, j], [i, j - 1, 'h', i, j - 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < n && b < n && !vis[a][b]); if (!nb.length) { stack.pop(); continue; } const [a, b, k, wi, wj] = nb[Math.floor(R() * nb.length)]; if (k === 'v') vw[wi][wj] = false; else hw[wi][wj] = false; vis[a][b] = true; stack.push([a, b]); }
+  const add = (x, y, w, h) => G.obstacles.push({ x, y, w, h, kind: 'maze' });
+  add(ox, oy, size, t); add(ox + size - t, oy, t, size); add(ox, oy + size - t, size, t); add(ox, oy, t, size - c); // рамка, вход слева у нижней клетки
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { if (i < n - 1 && vw[i][j]) add(ox + (i + 1) * c, oy + j * c, t, c + t); if (j < n - 1 && hw[i][j]) add(ox + i * c, oy + (j + 1) * c, c + t, t); }
+  const dist2 = []; for (let i = 0; i < n; i++) dist2.push(Array(n).fill(-1)); dist2[0][n - 1] = 0; const q = [[0, n - 1]]; let far = [0, n - 1];
+  while (q.length) { const [i, j] = q.shift(); const d = dist2[i][j]; if (d > dist2[far[0]][far[1]]) far = [i, j]; const nb = []; if (i < n - 1 && !vw[i][j]) nb.push([i + 1, j]); if (i > 0 && !vw[i - 1][j]) nb.push([i - 1, j]); if (j < n - 1 && !hw[i][j]) nb.push([i, j + 1]); if (j > 0 && !hw[i][j - 1]) nb.push([i, j - 1]); for (const [a, b] of nb) if (dist2[a][b] < 0) { dist2[a][b] = d + 1; q.push([a, b]); } }
+  return { x: ox + far[0] * c + c / 2 + t / 2, y: oy + far[1] * c + c / 2 + t / 2, r: 16 };
+}
 function newTask(R) {
   R = R || rng(G.level * 31 + G.taskN * 101); G.taskN++;
   const type = TASKS[(G.level + G.taskN) % TASKS.length], task = { type, items: [], done: 0, need: 3 };
   if (type === 'mouse') { task.need = 1; const p = freeSpot(R, 14); task.items.push({ x: p.x, y: p.y, r: 14, vx: 0, vy: 0 }); }
+  else if (type === 'maze') { task.need = 1; task.items.push(buildMaze(R)); }
+  else if (type === 'simon') { // четыре цветные плитки, показываем порядок из трёх, потом повторить ногами
+    const c = freeSpot(R, 90); const cx = clamp(c.x, 150, W - 150), cy = clamp(c.y, 150, H - 110);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b], i) => task.items.push({ x: cx + a * 55, y: cy + b * 50, r: 30, col: i, lit: 0 }));
+    task.seq = [0, 1, 2, 3].sort(() => R() - 0.5).slice(0, 3); task.phase = 'show'; task.showT = 1; task.showI = -1; task.onPad = -1;
+  }
+  else if (type === 'key') { task.need = 2; const k = freeSpot(R, 16), ch = freeSpot(R, 22); task.items.push({ x: k.x, y: k.y, r: 16, key: true }, { x: ch.x, y: ch.y, r: 22, chest: true }); }
+  else if (type === 'color') { task.col = Math.floor(R() * 3); const cols = [task.col, task.col, task.col, (task.col + 1) % 3, (task.col + 2) % 3, (task.col + 1) % 3, (task.col + 2) % 3]; for (const col of cols) { const p = freeSpot(R, 15); p.col = col; task.items.push(p); } }
   else for (let i = 0; i < 3; i++) { const p = freeSpot(R, type === 'rings' ? 26 : 20); p.hold = 0; task.items.push(p); }
   G.task = task;
   say(taskText(task), W / 2, 100, '#ffe08a', 1.8);
 }
 function taskText(t) {
   const who = G.who === 'cat';
-  return { collect: 'Задание: собери 3 золотые монетки', rings: 'Задание: пробеги 3 кольца по порядку', mouse: who ? 'Задание: поймай мышку' : 'Задание: догони мяч', buttons: 'Задание: наступи на 3 красные кнопки' }[t.type];
+  return { collect: 'Задание: собери 3 золотые монетки', rings: 'Задание: пробеги 3 кольца по порядку', mouse: who ? 'Задание: поймай мышку' : 'Задание: догони мяч', buttons: 'Задание: наступи на 3 красные кнопки', maze: 'Задание: найди флажок в лабиринте', simon: t.phase === 'show' ? 'Задание: запомни порядок цветов…' : 'Задание: наступай на плитки в том же порядке', key: 'Задание: найди ключ и открой сундук', color: `Задание: собери 3 ${BALL_NAMES[t.col]} шарика` }[t.type];
 }
 
 function dash() { // рывок от тапа: видно и слышно
@@ -744,7 +771,7 @@ function update(dt) {
   }
   // движение бегуна
   let dx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), dy = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
-  if (pointer.down && !pointer.btn) { const px = pointer.x - r.x, py = pointer.y - r.y, d = Math.hypot(px, py); if (d > 12) { dx = px / d; dy = py / d; } }
+  if (joy.id !== null) { const px = joy.x - joy.bx, py = joy.y - joy.by, d = Math.hypot(px, py); if (d > 6) { const k = Math.min(1, d / 40); dx = px / d * k; dy = py / d * k; } } // джойстик: чем дальше палец, тем быстрее
   const dl = Math.hypot(dx, dy); if (dl > 1) { dx /= dl; dy /= dl; }
   G.boost = Math.max(0, (G.boost || 0) - 420 * dt); const inMud = G.obstacles.some(o => o.kind === 'mud' && circleRect(r, o)); const sp = (r.speed + G.boost) * (r.swim > 0 ? 0.6 : 1) * (r.frozen > 0 ? 0 : 1);
   if (inMud) { if (!r.dirty) { r.dirty = true; say('Испачкался! Теперь можно в воду', r.x, r.y - 62, '#c9a070', 1.3); } if (Math.random() < 0.3) G.particles.push({ x: r.x + (Math.random() - 0.5) * 20, y: r.y + 20, vx: (Math.random() - 0.5) * 40, vy: -40, life: 0.4, col: '#6b4a2b' }); }
@@ -817,11 +844,11 @@ function update(dt) {
     b.x += b.vx * dt; b.y += b.vy * dt;
     if (G.shield.on > 0 && dist(b, r) < 42) { b.dead = true; say('Щит!', r.x, r.y - 60, '#9ad6ff', 0.6); continue; }
     if (r.inv <= 0 && dist(b, r) < r.r + b.r) { b.dead = true; r.hp = Math.max(0, r.hp - (b.dmg || 10)); r.inv = 0.6; SFX.hit(); say(`-${b.dmg || 10} ⚡`, r.x, r.y - 60, '#ffd166'); if (b.ice) { r.frozen = 1.5; say('ЗАМЁРЗ! ❄', r.x, r.y - 78, '#9ad6ff', 1); } if (r.hp <= 0) { if (!loseLife()) return; } }
-    if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence') && circleRect(b, o))) b.dead = true;
+    if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence' || o.kind === 'maze') && circleRect(b, o))) b.dead = true;
   }
   G.mBullets = G.mBullets.filter(b => !b.dead);
   // пули
-  for (const b of G.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; if (m.segs.some(s => Math.hypot(s.x - b.x, s.y - b.y) < m.r + b.r)) { b.dead = true; hurt(b.ice ? 5 : 1.6); if (b.ice) { m.frozen = 5; const h = m.segs[0]; say('ЗАМЁРЗ! ❄', h.x, h.y - 70, '#9ad6ff', 1.2); for (let i = 0; i < 16; i++) G.particles.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.5) * 260, life: 0.6, col: '#bfe9ff' }); } } if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence') && circleRect(b, o))) b.dead = true; }
+  for (const b of G.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; if (m.segs.some(s => Math.hypot(s.x - b.x, s.y - b.y) < m.r + b.r)) { b.dead = true; hurt(b.ice ? 5 : 1.6); if (b.ice) { m.frozen = 5; const h = m.segs[0]; say('ЗАМЁРЗ! ❄', h.x, h.y - 70, '#9ad6ff', 1.2); for (let i = 0; i < 16; i++) G.particles.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.5) * 260, life: 0.6, col: '#bfe9ff' }); } } if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence' || o.kind === 'maze') && circleRect(b, o))) b.dead = true; }
   G.bullets = G.bullets.filter(b => !b.dead);
   if (m.hp <= 0 && !G.result) { G.result = 'win'; SFX.win(); return; }
   // монстр кусает: чуть задел — 5 энергии, наполовину — 50, залетел целиком — 100 (съел)
@@ -865,6 +892,15 @@ function update(dt) {
     if (T.type === 'collect') { for (const it of T.items) if (!it.got && dist(it, r) < r.r + it.r) { it.got = true; T.done++; S.coins++; G.earned++; SFX.coin(); say('+1', it.x, it.y - 20, '#ffd700', 0.7); } }
     else if (T.type === 'rings') { const it = T.items[T.done]; if (it && dist(it, r) < it.r) { it.got = true; T.done++; SFX.task(); } }
     else if (T.type === 'mouse') { const it = T.items[0]; const d = dist(it, r) || 1; if (d < 150) { it.vx = (it.x - r.x) / d * 95; it.vy = (it.y - r.y) / d * 95; } else { it.vx *= 0.9; it.vy *= 0.9; } it.x += it.vx * dt; it.y += it.vy * dt; pushOut(it); if (d < r.r + it.r) { it.got = true; T.done = 1; SFX.task(); } }
+    else if (T.type === 'maze') { const it = T.items[0]; if (dist(it, r) < r.r + it.r) { it.got = true; T.done = 1; SFX.task(); G.obstacles = G.obstacles.filter(o => o.kind !== 'maze'); say('Нашёл!', it.x, it.y - 30, '#ffe08a', 0.8); } }
+    else if (T.type === 'simon') {
+      for (const it of T.items) it.lit = Math.max(0, it.lit - dt);
+      if (T.phase === 'show') { T.showT -= dt; if (T.showT <= 0) { T.showI++; if (T.showI >= T.seq.length) { T.phase = 'input'; T.showI = -1; say('Теперь повтори!', W / 2, 100, '#ffe08a', 1.2); } else { T.items[T.seq[T.showI]].lit = 0.55; T.showT = 0.75; tone('sine', 300 + T.seq[T.showI] * 120, 300 + T.seq[T.showI] * 120, 0.25, 0.2); } } }
+      else { let on = -1; T.items.forEach((it, i) => { if (dist(it, r) < it.r) on = i; });
+        if (on !== T.onPad) { T.onPad = on; if (on >= 0) { if (on === T.seq[T.done]) { T.items[on].lit = 0.5; T.done++; SFX.task(); tone('sine', 300 + on * 120, 300 + on * 120, 0.2, 0.2); } else { r.hp = Math.max(0, r.hp - 5); SFX.hit(); say('Не та плитка! -5 ⚡ Смотри ещё раз', r.x, r.y - 60, '#ff7043', 1.2); T.done = 0; T.phase = 'show'; T.showT = 1.2; T.showI = -1; if (r.hp <= 0) { if (!loseLife()) return; } } } } }
+    }
+    else if (T.type === 'key') { const [k, ch] = T.items; if (!k.got && dist(k, r) < r.r + k.r) { k.got = true; T.done++; SFX.coin(); say('Ключ! Теперь к сундуку', k.x, k.y - 30, '#ffd700', 1); } else if (k.got && !ch.got && dist(ch, r) < r.r + ch.r) { ch.got = true; T.done++; SFX.task(); S.coins += 3; G.earned += 3; say('+3 монеты из сундука!', ch.x, ch.y - 36, '#ffd700', 1.2); } }
+    else if (T.type === 'color') { for (const it of T.items) if (!it.got && dist(it, r) < r.r + it.r) { it.got = true; if (it.col === T.col) { T.done++; SFX.task(); } else { r.hp = Math.max(0, r.hp - 5); SFX.hit(); say('Не тот цвет! -5 ⚡', it.x, it.y - 24, '#ff7043', 0.9); if (r.hp <= 0) { if (!loseLife()) return; } } } }
     else if (T.type === 'buttons') { for (const it of T.items) if (!it.got) { if (dist(it, r) < it.r + 6) { it.hold += dt; if (it.hold >= 0.6) { it.got = true; T.done++; SFX.task(); } } else it.hold = Math.max(0, it.hold - dt * 2); } }
     if (T.done >= T.need) { G.task = null; G.charges = 2; G.charged = true; SFX.charged(); say(G.who === 'cat' ? '2 заряда! ОГОНЬ или ЩИТ' : '2 заряда! ЛЁД или ЩИТ', W / 2, 100, '#7CFC9A', 1.8); }
   }
@@ -922,10 +958,19 @@ function drawObstacle(o, w) {
   else if (o.kind === 'thorns') { ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2 + 3, o.y + o.h / 2 + 6, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#2f6b2a'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#3f8f3a'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(o.x + o.w * (0.2 + (i % 3) * 0.3), o.y + o.h * (0.3 + Math.floor(i / 3) * 0.4), o.w * 0.14, o.h * 0.16, 0, 0, 7); ctx.fill(); } ctx.strokeStyle = '#e8e2c8'; ctx.lineWidth = 2; const R2 = rng(o.x * 31 + o.y); for (let i = 0; i < 10; i++) { const a = R2() * 6.28, rx = o.w / 2 * 0.85, ry = o.h / 2 * 0.85, px = o.x + o.w / 2 + Math.cos(a) * rx * (0.3 + R2() * 0.7), py = o.y + o.h / 2 + Math.sin(a) * ry * (0.3 + R2() * 0.7); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a) * 7, py + Math.sin(a) * 7); ctx.stroke(); } }
   else if (o.kind === 'spikes') { ctx.fillStyle = '#5a5e66'; ctx.beginPath(); rr(o.x, o.y, o.w, o.h, 4); ctx.fill(); for (let px = o.x + 8; px < o.x + o.w - 6; px += 16) for (let py = o.y + 8; py < o.y + o.h - 4; py += 16) { ctx.fillStyle = '#d7dbe3'; tri(px - 6, py + 6, px + 6, py + 6, px, py - 8); ctx.fillStyle = '#8a8f99'; tri(px, py + 6, px + 6, py + 6, px, py - 8); } }
   else if (o.kind === 'lava') { const t = performance.now() / 500; ctx.fillStyle = '#3a1a0a'; ctx.beginPath(); rr(o.x - 5, o.y - 5, o.w + 10, o.h + 10, 10); ctx.fill(); ctx.fillStyle = '#ff5a1f'; ctx.beginPath(); rr(o.x, o.y, o.w, o.h, 8); ctx.fill(); ctx.fillStyle = '#ffb347'; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(o.x + o.w * (0.15 + (i % 3) * 0.35), o.y + o.h * (0.3 + Math.floor(i / 3) * 0.4), 7 + Math.sin(t + i) * 3, 5 + Math.cos(t + i) * 2, 0, 0, 7); ctx.fill(); } }
+  else if (o.kind === 'maze') { ctx.fillStyle = '#0003'; ctx.fillRect(o.x + 2, o.y + 3, o.w, o.h); ctx.fillStyle = '#a8553a'; ctx.fillRect(o.x, o.y, o.w, o.h); ctx.fillStyle = '#d9b48f'; if (o.w > o.h) { for (let px = o.x + 12; px < o.x + o.w; px += 24) ctx.fillRect(px, o.y, 2, o.h); } else { for (let py = o.y + 12; py < o.y + o.h; py += 24) ctx.fillRect(o.x, py, o.w, 2); } }
   else if (o.kind === 'fence') { ctx.fillStyle = '#0003'; ctx.fillRect(o.x + 3, o.y + 6, o.w, o.h); ctx.fillStyle = '#c89b5a'; ctx.fillRect(o.x, o.y + 3, o.w, 5); ctx.fillRect(o.x, o.y + o.h - 4, o.w, 4); for (let px = o.x; px < o.x + o.w; px += 18) { ctx.fillStyle = '#b5864a'; ctx.fillRect(px, o.y - 6, 7, o.h + 10); ctx.fillStyle = '#d4a86a'; tri(px, o.y - 6, px + 7, o.y - 6, px + 3.5, o.y - 11); } }
   else { ctx.fillStyle = '#0003'; ctx.beginPath(); rr(o.x + 4, o.y + 8, o.w, o.h, 6); ctx.fill(); ctx.fillStyle = Wd.wall; ctx.beginPath(); rr(o.x, o.y, o.w, o.h, 6); ctx.fill(); ctx.strokeStyle = '#0004'; ctx.lineWidth = 2; ctx.stroke(); if (w === 0) { ctx.fillStyle = '#3f8f3a'; for (let i = 0; i < o.w; i += 22) { ctx.beginPath(); ctx.arc(o.x + i + 10, o.y + 2, 12, 0, 7); ctx.fill(); } } }
 }
 function drawItem(it, type) {
+  if (type === 'maze') { if (it.got) return; ctx.strokeStyle = '#444'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(it.x - 4, it.y + 16); ctx.lineTo(it.x - 4, it.y - 20); ctx.stroke(); ctx.fillStyle = '#e63946'; const fw = Math.sin(performance.now() / 150) * 2; tri(it.x - 4, it.y - 20, it.x + 18 + fw, it.y - 13, it.x - 4, it.y - 6); return; }
+  if (type === 'simon') { const lit = it.lit > 0; ctx.fillStyle = SIMON_COLS[it.col]; ctx.globalAlpha = lit ? 1 : 0.4; ctx.beginPath(); rr(it.x - it.r, it.y - it.r * 0.8, it.r * 2, it.r * 1.6, 10); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = lit ? '#fff' : '#0005'; ctx.lineWidth = lit ? 5 : 2; ctx.stroke(); return; }
+  if (type === 'key') {
+    if (it.key) { if (it.got) return; ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 4; ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(it.x - 7, it.y, 8, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffd700'; ctx.fillRect(it.x, it.y - 2.5, 20, 5); ctx.fillRect(it.x + 12, it.y, 4, 7); ctx.fillRect(it.x + 18, it.y, 4, 7); return; }
+    ctx.fillStyle = '#0003'; ctx.beginPath(); ctx.ellipse(it.x, it.y + 20, 26, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#8b5a2b'; ctx.beginPath(); rr(it.x - 24, it.y - 10, 48, 30, 5); ctx.fill(); ctx.fillStyle = it.got ? '#5a3a1a' : '#a06a35'; ctx.beginPath(); rr(it.x - 24, it.y - 22, 48, 16, 6); ctx.fill(); ctx.fillStyle = '#ffd700'; if (it.got) { ctx.beginPath(); ctx.arc(it.x, it.y - 8, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#fff6b0'; ctx.beginPath(); ctx.arc(it.x - 10, it.y - 4, 5, 0, 7); ctx.arc(it.x + 10, it.y - 4, 5, 0, 7); ctx.fill(); } else { ctx.fillRect(it.x - 5, it.y - 8, 10, 12); ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(it.x, it.y - 4, 2.5, 0, 7); ctx.fill(); }
+    return;
+  }
+  if (type === 'color') { if (it.got) return; ctx.fillStyle = BALL_COLS[it.col]; ctx.beginPath(); ctx.arc(it.x, it.y, 14, 0, 7); ctx.fill(); ctx.fillStyle = '#ffffff99'; ctx.beginPath(); ctx.arc(it.x - 5, it.y - 5, 4, 0, 7); ctx.fill(); ctx.strokeStyle = '#0005'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(it.x, it.y, 14, 0, 7); ctx.stroke(); return; }
   if (it.got) return;
   if (type === 'collect') {
     const pulse = 1 + Math.sin(performance.now() / 150) * 0.08;
@@ -1007,7 +1052,7 @@ function drawGame() {
   // стрелка к ближайшему предмету задания
   if (G.task && !G.result) {
     let tgt = null;
-    if (G.task.type === 'rings') tgt = G.task.items[G.task.done]; else { let best = 1e9; for (const it of G.task.items) if (!it.got) { const d = dist(it, r); if (d < best) { best = d; tgt = it; } } }
+    const T = G.task; if (T.type === 'rings') tgt = T.items[T.done]; else if (T.type === 'simon') tgt = T.phase === 'input' ? T.items[T.seq[T.done]] : null; else if (T.type === 'key') tgt = !T.items[0].got ? T.items[0] : T.items[1]; else { let best = 1e9; for (const it of T.items) if (!it.got && (T.type !== 'color' || it.col === T.col)) { const d = dist(it, r); if (d < best) { best = d; tgt = it; } } }
     if (tgt && dist(tgt, r) > 70) {
       const a = Math.atan2(tgt.y - r.y, tgt.x - r.x), ax = r.x + Math.cos(a) * 52, ay = r.y + Math.sin(a) * 52;
       ctx.save(); ctx.translate(ax, ay); ctx.rotate(a); ctx.globalAlpha = 0.6 + Math.sin(performance.now() / 150) * 0.3;
@@ -1025,7 +1070,7 @@ function drawGame() {
   ctx.fillStyle = 'rgba(20,24,48,0.75)'; ctx.fillRect(0, 0, W, 48);
   text(`Мир ${G.world + 1} «${WORLDS[G.world].name}» · уровень ${G.level}`, 14, 31, 18, '#fff', 'left');
   text(`₽ ${S.coins}`, W - 78, 31, 18, '#ffd700', 'right');
-  if (G.task) text(taskText(G.task) + `  ${G.task.done}/${G.task.need}`, W / 2 - 60, 31, 16, '#ffe08a');
+  if (G.task) { text(taskText(G.task) + `  ${G.task.done}/${G.task.need}`, W / 2 - 60, 31, 16, '#ffe08a'); if (G.task.type === 'color') { ctx.fillStyle = BALL_COLS[G.task.col]; ctx.beginPath(); ctx.arc(W / 2 - 60 + ctx.measureText(taskText(G.task)).width / 2 + 30, 26, 9, 0, 7); ctx.fill(); } }
   else if (G.charged) text(`ЗАРЯДОВ: ${G.charges}`, W / 2 - 60, 31, 16, '#7CFC9A');
   if (G.runner.armor) text('🛡', W - 300, 31, 15, '#9ad6ff');
   for (let i = 0; i < 3; i++) text(i < G.runner.lives ? '❤' : '♡', W - 390 + i * 20, 32, 17, i < G.runner.lives ? '#ff4d6d' : '#ffffff66');
@@ -1035,6 +1080,11 @@ function drawGame() {
     btn(W - 120, H - 90, 104, 70, (G.who === 'cat' ? 'ОГОНЬ' : 'ЛЁД') + ' ×' + G.charges, action, G.who === 'cat' ? '#e74c3c' : '#3b82f6'); buttons[buttons.length - 1].instant = true;
     btn(W - 232, H - 90, 104, 70, 'ЩИТ ×' + G.charges, shieldAction, '#2ecc71'); buttons[buttons.length - 1].instant = true;
   } else { btn(W - 120, H - 90, 104, 70, 'задание…', action, '#555'); buttons[buttons.length - 1].instant = true; }
+  if (joy.id !== null) { // джойстик под пальцем
+    const d = Math.min(joy.R, Math.hypot(joy.x - joy.bx, joy.y - joy.by)), a = Math.atan2(joy.y - joy.by, joy.x - joy.bx);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.bx, joy.by, joy.R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(joy.bx + Math.cos(a) * d, joy.by + Math.sin(a) * d, 28, 0, 7); ctx.fill();
+  } else if (G.t < 6 && !G.result) { ctx.globalAlpha = 0.35; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(120, H - 100, joy.R, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(120, H - 100, 28, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; text('джойстик: веди пальцем по полю', 120, H - 28, 12, '#fff'); }
   btn(W - 60, 8, 50, 32, '✕', () => toEnd('quit'), '#555', true);
   if (G.raceCd > 0) { ctx.fillStyle = '#0006'; ctx.fillRect(0, 50, W, H - 50); text('ГОНКА ЗА ВКУСНЯШКОЙ', W / 2, H / 2 - 70, 32, '#ffd166'); text(String(Math.max(1, Math.ceil(G.raceCd - 0.2))), W / 2, H / 2 + 30, 90, '#fff'); text('Тапай быстрее, чтобы бежать быстрее!', W / 2, H / 2 + 80, 18, '#fff', 'center', false); }
   if (G.t < 4 && !G.result) {
