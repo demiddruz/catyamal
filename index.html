@@ -23,7 +23,7 @@
 // ───────────────────────── базовое ─────────────────────────
 let W = 960, H = 600; // поле подстраивается под пропорции окна — игра на весь экран
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
+const TOUCH = matchMedia('(pointer: coarse) and (hover: none)').matches; // только телефоны и планшеты; ноутбук с сенсорным экраном — всё равно компьютер // телефон/планшет — экранные кнопки, компьютер — клавиатура
 let ROT = false; // телефон держат вертикально — рисуем боком; на компьютере никогда не поворачиваем
 function fit() {
   ROT = TOUCH && innerHeight > innerWidth; const vw = ROT ? innerHeight : innerWidth, vh = ROT ? innerWidth : innerHeight;
