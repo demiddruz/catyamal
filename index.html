@@ -23,9 +23,10 @@
 // ───────────────────────── базовое ─────────────────────────
 let W = 960, H = 600; // поле подстраивается под пропорции окна — игра на весь экран
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-let ROT = false; // телефон держат вертикально — рисуем боком, игра только горизонтальная
+const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
+let ROT = false; // телефон держат вертикально — рисуем боком; на компьютере никогда не поворачиваем
 function fit() {
-  ROT = innerHeight > innerWidth; const vw = ROT ? innerHeight : innerWidth, vh = ROT ? innerWidth : innerHeight;
+  ROT = TOUCH && innerHeight > innerWidth; const vw = ROT ? innerHeight : innerWidth, vh = ROT ? innerWidth : innerHeight;
   const a = vw / Math.max(1, vh);
   if (a >= 1.6) { H = 600; W = Math.round(600 * a); } else { W = 960; H = Math.round(960 / a); }
   W = Math.min(W, 1800); H = Math.min(H, 1400);
@@ -647,7 +648,6 @@ function energyBar(x, y, w, who, label) {
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else if (screen === 'match') matchShoot(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
-const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
 const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 78, get hx() { return W - 135; }, hy: 0 }; // крупный джойстик в правом нижнем углу // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
 function toCanvas(e) { if (ROT) return { x: e.clientY * W / innerHeight, y: (innerWidth - e.clientX) * H / innerWidth }; return { x: e.clientX * W / innerWidth, y: e.clientY * H / innerHeight }; }
 cv.addEventListener('pointerdown', e => {
