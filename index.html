@@ -648,7 +648,7 @@ function energyBar(x, y, w, who, label) {
 
 // ───────────────────────── ввод ─────────────────────────
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else if (screen === 'match') matchShoot(); else if (screen === 'juggle') juggleTap(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else if (screen === 'match') matchShoot(); else if (screen === 'juggle') juggleTap(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') { if (screen === 'match') matchTackle(); else shieldAction(); } if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
 const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 78, get hx() { return W - 135; }, hy: 0 }; // крупный джойстик в правом нижнем углу // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
 function toCanvas(e) { if (ROT) return { x: e.clientY * W / innerHeight, y: (innerWidth - e.clientX) * H / innerWidth }; return { x: e.clientX * W / innerWidth, y: e.clientY * H / innerHeight }; }
@@ -754,6 +754,7 @@ const MG = () => ({ top: H / 2 - 80, bot: H / 2 + 80, depth: 40, fy: 70, bottom:
 function startMatch() { M = { t: 120, you: 0, them: 0, ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, rot: 0 }, L: { x: W * 0.3, y: H / 2, legT: 0, flip: false, kickCd: 0, dive: 0, keeper: false, who: 'boy' }, R: { x: W * 0.7, y: H / 2, legT: 0, flip: true, kickCd: 0, dive: 0, keeper: false, who: 'cat' }, pauseT: 1.2, msg: '', over: false }; screen = 'match'; matchReset('cat'); }
 function matchReset(who) { const b = M.ball; b.vx = b.vy = 0; b.y = H / 2; b.x = W / 2 + (who === 'cat' ? 40 : -40); M.L.x = W * 0.3; M.L.y = H / 2; M.R.x = W * 0.7; M.R.y = H / 2; M.pauseT = 1.2; M.msg = who === 'cat' ? 'Ник разводит!' : 'Леон разводит!'; }
 function mePlayer() { return footMe() === 'boy' ? M.L : M.R; }
+function matchTackle() { if (!M || M.over) return; const P = mePlayer(); if (P.tackleCd > 0 || P.frozen > 0) return; P.tackle = 0.4; P.hitDone = false; P.tackleCd = 1.2; SFX.shot(); }
 function matchShoot() { if (!M) return; if (M.over) { startMatch(); return; } const b = M.ball, P = mePlayer(), g = MG(); if (dist(P, b) < 80) { const gx = P === M.L ? W : 0, ty = clamp(b.y, g.top + 25, g.bot - 25), dx = gx - b.x, dy = ty - b.y, dd = Math.hypot(dx, dy) || 1; b.vx = dx / dd * 640; b.vy = dy / dd * 640; SFX.shot(); say('УДАР!', P.x, P.y - 70, '#ffe600', 0.6); } }
 function updateMatch(dt) {
   const g = MG(), b = M.ball; if (M.over) return;
@@ -766,12 +767,21 @@ function updateMatch(dt) {
   const dl = Math.hypot(dx, dy); if (dl > 1) { dx /= dl; dy /= dl; }
   P.x += dx * 300 * dt; P.y += dy * 300 * dt; if (dl > 0.1) { P.legT += dt * 14; if (Math.abs(dx) > 0.2) P.flip = dx < 0; }
   P.x = clamp(P.x, 40, W - 40); P.y = clamp(P.y, g.fy + 30, H - 50); P.keeper = false;
-  if (dist(P, b) < 42) { const ax = b.x - P.x, ay = b.y - P.y, ad = Math.hypot(ax, ay) || 1; b.vx = ax / ad * 280 + dx * 140; b.vy = ay / ad * 280 + dy * 140; }
+  // подкат: короткий рывок вперёд; задел соперника с мячом — отобрал, без мяча — фол и карточка
+  for (const E of [P, A]) { E.tackle = Math.max(0, (E.tackle || 0) - dt); E.frozen = Math.max(0, (E.frozen || 0) - dt); E.tackleCd = Math.max(0, (E.tackleCd || 0) - dt); }
+  if (P.frozen > 0) { P.x -= dx * 300 * dt; P.y -= dy * 300 * dt; } // с красной карточкой стоишь
+  if (P.tackle > 0) { P.x += (P.flip ? -1 : 1) * 520 * dt; P.x = clamp(P.x, 40, W - 40); }
+  M.cardT = Math.max(0, (M.cardT || 0) - dt);
+  const tryTackle = (T, V) => { if (T.tackle <= 0 || T.hitDone || dist(T, V) > 52) return; T.hitDone = true; const hasBall = dist(V, b) < 60; if (hasBall) { const kx = T.flip ? -1 : 1; b.vx = kx * 320; b.vy = (Math.random() - 0.5) * 160; V.frozen = Math.max(V.frozen, 0.5); say('ОТОБРАЛ!', T.x, T.y - 70, '#7CFC9A', 0.8); SFX.task(); if (T === P) { M.steals = (M.steals || 0) + 1; if (M.steals % 3 === 0) { M.card = 'green'; M.cardT = 1.6; say('Зелёная карточка: чисто играешь!', W / 2, H / 2 - 120, '#2ecc71', 1.6); } } } else { T.fouls = (T.fouls || 0) + 1; const red = T.fouls >= 2; M.card = red ? 'red' : 'yellow'; M.cardT = 1.6; SFX.hit(); say(red ? 'КРАСНАЯ! Стоишь 4 секунды' : 'Жёлтая карточка!', W / 2, H / 2 - 120, red ? '#e63946' : '#ffd700', 1.6); if (red) { T.frozen = 4; T.fouls = 0; } V.frozen = Math.max(V.frozen, 0.4); } };
+  tryTackle(P, A); tryTackle(A, P);
+  if (A.tackle <= 0 && A.tackleCd <= 0 && dist(P, b) < 60 && dist(A, P) < 110 && Math.random() < 0.6 * dt) { A.tackle = 0.4; A.hitDone = false; A.tackleCd = 3; A.flip = P.x < A.x; }
+  if (A.tackle > 0) { A.x += (A.flip ? -1 : 1) * 480 * dt; }
+  if (P.frozen <= 0 && dist(P, b) < 42) { const ax = b.x - P.x, ay = b.y - P.y, ad = Math.hypot(ax, ay) || 1; b.vx = ax / ad * 280 + dx * 140; b.vy = ay / ad * 280 + dy * 140; }
   // соперник (компьютер): медленнее тебя, бьёт реже и неточно; когда мяч летит в его ворота — встаёт вратарём
   A.kickCd = Math.max(0, A.kickCd - dt); A.dive = Math.max(0, A.dive - dt);
   const towardA = aGoalX === 0 ? b.vx < -60 && b.x < W * 0.45 : b.vx > 60 && b.x > W * 0.55; A.keeper = towardA;
   const tgt = A.keeper ? { x: aGoalX === 0 ? 50 : W - 50, y: clamp(b.y + b.vy * 0.2, g.top + 22, g.bot - 22) } : { x: b.x + (aGoalX === 0 ? 18 : -18), y: b.y };
-  const nd = dist(A, tgt) || 1, ns = A.keeper ? 320 : 175; A.x += (tgt.x - A.x) / nd * Math.min(ns * dt, nd); A.y += (tgt.y - A.y) / nd * Math.min(ns * dt, nd); A.legT += dt * 12; A.flip = b.x < A.x; A.x = clamp(A.x, 40, W - 40); A.y = clamp(A.y, g.fy + 30, H - 50);
+  const nd = dist(A, tgt) || 1, ns = A.frozen > 0 || A.tackle > 0 ? 0 : A.keeper ? 320 : 175; A.x += (tgt.x - A.x) / nd * Math.min(ns * dt, nd); A.y += (tgt.y - A.y) / nd * Math.min(ns * dt, nd); A.legT += dt * 12; A.flip = b.x < A.x; A.x = clamp(A.x, 40, W - 40); A.y = clamp(A.y, g.fy + 30, H - 50);
   if (A.keeper && Math.abs(b.x - A.x) < 90 && A.dive <= 0 && Math.abs(b.y - A.y) > 20) A.dive = 0.6;
   if (A.keeper && dist(A, b) < 46 && ((aGoalX === 0 && b.vx < 0) || (aGoalX === W && b.vx > 0)) && Math.random() < 0.7) { b.vx = (aGoalX === 0 ? 1 : -1) * (Math.abs(b.vx) * 0.6 + 120); b.vy += (Math.random() - 0.5) * 220; A.kickCd = 0.6; say('СЕЙВ!', b.x, b.y - 40, '#fff', 1); SFX.task(); }
   else if (dist(A, b) < 44 && A.kickCd <= 0) { const ty = g.top + 30 + Math.random() * (g.bot - g.top - 60), kx = pGoalX === W ? 0 - b.x : W - b.x, ky = ty - b.y, kd = Math.hypot(kx, ky) || 1, pw = 360; b.vx = kx / kd * pw + (Math.random() - 0.5) * 160; b.vy = ky / kd * pw + (Math.random() - 0.5) * 160; A.kickCd = 1.4; if (A.who === 'cat') SFX.meow(); }
@@ -799,18 +809,19 @@ function drawGoal(g, side) { // ворота: сетка в глубину, то
 }
 function drawMatch() {
   const g = MG(), b = M.ball, t = performance.now() / 1000; drawPitch(g); drawGoal(g, 0); drawGoal(g, 1);
-  const ents = [M.L, M.R].map(e => ({ y: e.y, d: () => e.who === 'boy' ? drawBoy(e.x, e.y + 20, 1.25, { flip: e.flip, legT: e.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }) : drawCatStanding(e.x, e.y + 20, 1.1, { flip: e.flip, legT: e.legT, gloves: e.keeper, mood: e.dive > 0 ? 'shock' : 'happy' }) }));
+  const ents = [M.L, M.R].map(e => ({ y: e.y, d: () => { ctx.save(); if (e.tackle > 0) { ctx.translate(e.x, e.y + 30); ctx.rotate((e.flip ? 1 : -1) * 1.1); ctx.translate(-e.x, -e.y - 30); } if (e.frozen > 0 && e.tackle <= 0) ctx.globalAlpha = 0.6; if (e.who === 'boy') drawBoy(e.x, e.y + 20, 1.25, { flip: e.flip, legT: e.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatStanding(e.x, e.y + 20, 1.1, { flip: e.flip, legT: e.legT, gloves: e.keeper, mood: e.dive > 0 ? 'shock' : 'happy' }); ctx.restore(); } }));
   ents.push({ y: b.y + 1, d: () => drawBall(b.x, b.y, 22, 0, b.rot) });
-  const whistle = M.pauseT > 0 || (M.goalFlash || 0) > 0; drawReferee(W / 2 + 150, g.fy + 44, 0.95, { legT: 0, whistle, blink: Math.floor(t * 2) % 7 === 0 }); if (whistle) text('ФИИИ!', W / 2 + 150, g.fy - 10, 16, '#fff');
+  const whistle = M.pauseT > 0 || (M.goalFlash || 0) > 0; drawReferee(W / 2 + 150, g.fy + 78, 0.95, { legT: 0, whistle: whistle || M.cardT > 0, card: M.cardT > 0 ? M.card : null, blink: Math.floor(t * 2) % 7 === 0 }); if (whistle || M.cardT > 0) text('ФИИИ!', W / 2 + 215, g.fy + 40, 16, '#fff');
+  if (M.cardT > 0) { const col = M.card === 'red' ? '#e63946' : M.card === 'green' ? '#2ecc71' : '#ffd700'; ctx.fillStyle = col; ctx.beginPath(); rr(W / 2 - 30, H / 2 - 95, 60, 84, 6); ctx.fill(); ctx.strokeStyle = '#0006'; ctx.lineWidth = 3; ctx.stroke(); }
   ents.sort((a, c) => a.y - c.y).forEach(e => e.d());
   panel(W / 2 - 190, 6, 380, 46); text(`Леон ${footMe() === 'boy' ? M.you : M.them} : ${footMe() === 'boy' ? M.them : M.you} Ник   ·   ${Math.floor(M.t / 60)}:${String(Math.floor(M.t % 60)).padStart(2, '0')}`, W / 2, 36, 22, '#ffe08a');
   if (M.pauseT > 0 && !M.over) text(M.msg, W / 2, H / 2 - 110, 30, '#fff');
   M.goalFlash = Math.max(0, (M.goalFlash || 0) - 0.016); if (M.goalFlash > 0) { ctx.fillStyle = '#0007'; ctx.beginPath(); rr(W / 2 - 160, H / 2 - 70, 320, 120, 16); ctx.fill(); text('ГОЛ!', W / 2 + 30, H / 2 - 18, 44, '#ffe08a'); drawBall(W / 2 - 110, H / 2 - 28, 26, 0, t * 4); if (M.goalBy === 'boy') drawBoy(W / 2 + 20, H / 2 + 30, 0.6, { mouth: 0.6 }); else drawCatStanding(W / 2 + 20, H / 2 + 30, 0.6, {}); }
   if (M.over) { ctx.fillStyle = '#0008'; ctx.fillRect(0, 0, W, H); text(M.msg, W / 2, H / 2 - 20, 40, '#ffe08a'); text(`${M.you} : ${M.them}  —  тап: ещё раз`, W / 2, H / 2 + 30, 22, '#fff'); }
-  else text(TOUCH ? `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: джойстик — бег, УДАР — по воротам ${footMe() === 'boy' ? 'справа' : 'слева'}` : `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: стрелки/WASD — бег, пробел — удар по воротам ${footMe() === 'boy' ? 'справа' : 'слева'}`, W / 2, H - 8, 14, '#ffffffcc', 'center', false);
+  else text(TOUCH ? `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: джойстик — бег, УДАР — по воротам, ПОДКАТ — отобрать мяч (без мяча — карточка!)` : `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: стрелки/WASD — бег, пробел — удар по воротам ${footMe() === 'boy' ? 'справа' : 'слева'}, Shift — подкат (без мяча — карточка!)`, W / 2, H - 8, 14, '#ffffffcc', 'center', false);
   btn(W - 150, 58, 136, 34, 'Меню', () => { screen = 'fmenu'; M = null; }, '#555', true);
   if (TOUCH) drawJoy();
-  if (TOUCH && !M.over) { btn(16, H - 110, 120, 70, 'УДАР', () => matchShoot(), '#3b82f6'); buttons[buttons.length - 1].instant = true; }
+  if (TOUCH && !M.over) { btn(16, H - 110, 120, 70, 'УДАР', () => matchShoot(), '#3b82f6'); buttons[buttons.length - 1].instant = true; const P = mePlayer(); btn(146, H - 110, 120, 70, P.tackleCd > 0 ? `ПОДКАТ ${P.tackleCd.toFixed(1)}` : 'ПОДКАТ', () => matchTackle(), P.tackleCd > 0 ? '#555' : '#e67e22'); buttons[buttons.length - 1].instant = true; }
 }
 // ───────────────────────── чеканка ─────────────────────────
 let J = null;
@@ -897,14 +908,22 @@ const GLOVES = [
   { n: 'Фиолетовые', palm: '#6a4fc4', finger: '#c6ff4a', finger2: '#6a4fc4', thumb: '#c6ff4a', strap: '#111', accent: '#c6ff4a' },
   { n: 'Триколор', palm: '#fff', finger: '#0039a6', finger2: '#d52b1e', thumb: '#fff', strap: '#0039a6', accent: '#d52b1e' },
 ];
-function drawReferee(x, y, s, o = {}) { // судья по фото: русые волосы с чёлкой на лоб, карие глаза, чёрная форма с жёлтой нашивкой, свисток
+function drawReferee(x, y, s, o = {}) { // судья по фото: русые волосы с чёлкой, карие глаза; чёрная форма с нашивкой, свисток на шнурке, в руке веер карточек; при нарушении поднимает карточку
   const REF = { n: 'Судья', hair: '#8a6a3b', fringe: 'bowl', eyes: '#5a3a1e', skin: '#f3d6bc' };
-  KIT_NAME = 'REF'; KIT_NUM = ''; drawBoy(x, y, s, { lookObj: REF, legT: o.legT || 0, flip: o.flip, mouth: o.whistle ? 0.6 : 0.1, noString: true, outfit: { shirt: 0, shorts: 2, feet: 1, hair: 1, string: 0 }, blink: o.blink }); KIT_NAME = 'LEON'; KIT_NUM = '17';
+  KIT_NAME = 'REF'; KIT_NUM = ''; drawBoy(x, y, s, { lookObj: REF, legT: o.legT || 0, flip: o.flip, mouth: o.whistle ? 0.6 : 0.1, noString: true, noArms: true, outfit: { shirt: 0, shorts: 2, feet: 1, hair: 1, string: 0 }, blink: o.blink }); KIT_NAME = 'LEON'; KIT_NUM = '17';
   ctx.save(); ctx.translate(x, y); ctx.scale(o.flip ? -s : s, s);
-  ctx.fillStyle = '#15161a'; jerseyPath(0, -26, 36, 32); ctx.fill(); ctx.fillStyle = '#ffd700'; ctx.beginPath(); rr(-13, -20, 8, 7, 2); ctx.fill(); ctx.fillStyle = '#111'; ctx.font = 'bold 5px Arial'; ctx.textAlign = 'center'; ctx.fillText('REF', -9, -15); // чёрная футболка поверх, нашивка
-  ctx.fillStyle = '#15161a'; ctx.fillRect(-26, -22, 11, 10); ctx.fillRect(15, -22, 11, 10); // рукава
-  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-4, -31); ctx.quadraticCurveTo(-8, -18, 0, -12); ctx.quadraticCurveTo(8, -18, 4, -31); ctx.stroke(); // шнурок
-  if (o.whistle) { ctx.fillStyle = '#c0c0c0'; ctx.beginPath(); rr(2, -40, 9, 5, 2); ctx.fill(); ctx.beginPath(); ctx.arc(10, -36, 3.5, 0, 7); ctx.fill(); } else { ctx.fillStyle = '#c0c0c0'; ctx.beginPath(); rr(-4, -13, 8, 4, 1.5); ctx.fill(); ctx.beginPath(); ctx.arc(3, -10, 2.8, 0, 7); ctx.fill(); } // свисток: во рту или на шнурке
+  ctx.fillStyle = '#15161a'; jerseyPath(0, -26, 36, 32); ctx.fill(); ctx.fillStyle = '#ffd700'; ctx.beginPath(); rr(-13, -20, 8, 7, 2); ctx.fill(); ctx.fillStyle = '#111'; ctx.font = 'bold 5px Arial'; ctx.textAlign = 'center'; ctx.fillText('REF', -9, -15);
+  ctx.fillStyle = '#f4f4f4'; ctx.fillRect(-4, -27, 8, 3); // белый воротник
+  // руки: правая держит карточки, левая — свисток (или поднята с карточкой)
+  const SK = REF.skin, card = o.card; // 'yellow' | 'red' | 'green'
+  ctx.strokeStyle = SK; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, -14); ctx.lineTo(27, 10); ctx.stroke(); // правая вниз
+  const fan = [['#2ecc71', -0.35], ['#e63946', -0.15], ['#ffd700', 0.05]]; for (const [col, ang] of fan) { ctx.save(); ctx.translate(27, 10); ctx.rotate(ang); ctx.fillStyle = col; ctx.beginPath(); rr(-4, -2, 8, 12, 1.5); ctx.fill(); ctx.restore(); } // веер карточек в руке
+  if (card) { const col = card === 'red' ? '#e63946' : card === 'green' ? '#2ecc71' : '#ffd700'; ctx.beginPath(); ctx.moveTo(-22, -14); ctx.lineTo(-26, -52); ctx.stroke(); ctx.fillStyle = col; ctx.beginPath(); rr(-33, -72, 14, 20, 2); ctx.fill(); ctx.strokeStyle = '#0005'; ctx.lineWidth = 1; ctx.beginPath(); rr(-33, -72, 14, 20, 2); ctx.stroke(); } // левая поднята с карточкой
+  else { ctx.beginPath(); ctx.moveTo(-22, -14); ctx.lineTo(-24, 12); ctx.stroke(); }
+  // свисток: шнурок с шеи, серебряный корпус, колечко, шарик внутри
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-5, -31); ctx.quadraticCurveTo(-9, -18, 0, o.whistle ? -36 : -10); ctx.quadraticCurveTo(9, -18, 5, -31); ctx.stroke();
+  const wy = o.whistle ? -38 : -8, wx = o.whistle ? 6 : 0; ctx.fillStyle = '#c9ccd3'; ctx.beginPath(); rr(wx - 7, wy - 3, 11, 6, 2); ctx.fill(); ctx.beginPath(); ctx.arc(wx + 5, wy + 1.5, 4.2, 0, 7); ctx.fill(); ctx.fillStyle = '#8d9096'; ctx.beginPath(); ctx.arc(wx + 5, wy + 1.5, 1.6, 0, 7); ctx.fill(); ctx.strokeStyle = '#8d9096'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(wx - 7, wy, 2, 0, 7); ctx.stroke();
   ctx.restore();
 }
 function drawJoy() { // виртуальный джойстик: под пальцем или постоянный в правом нижнем углу
