@@ -2,11 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
 <title>Кот против Мальчика</title>
 <style>
   html,body{margin:0;height:100%;background:#1b2238;overflow:hidden;touch-action:none;font-family:"Segoe UI",Arial,sans-serif;}
-  #c{position:absolute;left:0;top:0;background:transparent;}
+  #c{position:fixed;left:0;top:0;background:transparent;transform-origin:0 0;}
   body{background:#0f1424;}
 </style>
 </head>
@@ -19,11 +23,14 @@
 // ───────────────────────── базовое ─────────────────────────
 let W = 960, H = 600; // поле подстраивается под пропорции окна — игра на весь экран
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let ROT = false; // телефон держат вертикально — рисуем боком, игра только горизонтальная
 function fit() {
-  const a = innerWidth / Math.max(1, innerHeight);
+  ROT = innerHeight > innerWidth; const vw = ROT ? innerHeight : innerWidth, vh = ROT ? innerWidth : innerHeight;
+  const a = vw / Math.max(1, vh);
   if (a >= 1.6) { H = 600; W = Math.round(600 * a); } else { W = 960; H = Math.round(960 / a); }
   W = Math.min(W, 1800); H = Math.min(H, 1400);
-  cv.width = W; cv.height = H; cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+  cv.width = W; cv.height = H; cv.style.width = vw + 'px'; cv.style.height = vh + 'px';
+  cv.style.transform = ROT ? `translate(${innerWidth}px,0) rotate(90deg)` : 'none';
 }
 addEventListener('resize', fit); fit();
 
@@ -625,10 +632,11 @@ const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
 const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
-const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 58, hx: 120, hy: 0 }; // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
-function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
+const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 58, get hx() { return W - 120; }, hy: 0 }; // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
+function toCanvas(e) { if (ROT) return { x: e.clientY * W / innerHeight, y: (innerWidth - e.clientX) * H / innerWidth }; return { x: e.clientX * W / innerWidth, y: e.clientY * H / innerHeight }; }
 cv.addEventListener('pointerdown', e => {
   ac(); const p = toCanvas(e);
+  if (TOUCH && !window.__lockTried) { window.__lockTried = true; try { const so = window.screen.orientation; if (so && so.lock) so.lock('landscape').catch(() => {}); } catch (_) {} }
   if (screen === 'game' && G && !G.result && !hitBtn(p.x, p.y) && joy.id === null) { joy.id = e.pointerId; joy.hy = H - 100; const fixed = Math.hypot(p.x - joy.hx, p.y - joy.hy) < 95; joy.bx = fixed ? joy.hx : p.x; joy.by = fixed ? joy.hy : p.y; joy.x = p.x; joy.y = p.y; joy.t0 = performance.now(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; } // палец на поле — джойстик
   pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.id = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (_) {}
   pointer.sy = p.y; pointer.moved = 0; pointer.t0 = performance.now();
@@ -1091,9 +1099,9 @@ function drawGame() {
   // кнопка действия
   if (!TOUCH) { if (G.charged) text(`Пробел — ЛЁД ×${G.charges}   Shift — ЩИТ`, W - 20, H - 16, 15, '#fff', 'right'); }
   else if (G.charged) {
-    btn(W - 120, H - 90, 104, 70, 'ЛЁД ×' + G.charges, action, '#3b82f6'); buttons[buttons.length - 1].instant = true;
-    btn(W - 232, H - 90, 104, 70, 'ЩИТ ×' + G.charges, shieldAction, '#2ecc71'); buttons[buttons.length - 1].instant = true;
-  } else { btn(W - 120, H - 90, 104, 70, 'задание…', action, '#555'); buttons[buttons.length - 1].instant = true; }
+    btn(16, H - 90, 104, 70, 'ЛЁД ×' + G.charges, action, '#3b82f6'); buttons[buttons.length - 1].instant = true;
+    btn(128, H - 90, 104, 70, 'ЩИТ ×' + G.charges, shieldAction, '#2ecc71'); buttons[buttons.length - 1].instant = true;
+  } else { btn(16, H - 90, 104, 70, 'задание…', action, '#555'); buttons[buttons.length - 1].instant = true; }
   if (!TOUCH) { }
   else if (joy.id !== null) { // джойстик под пальцем
     const d = Math.min(joy.R, Math.hypot(joy.x - joy.bx, joy.y - joy.by)), a = Math.atan2(joy.y - joy.by, joy.x - joy.bx);

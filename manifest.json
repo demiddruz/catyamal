@@ -1,0 +1,16 @@
+{
+  "name": "Кот против Мальчика",
+  "short_name": "Кот и Леон",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f1424",
+  "theme_color": "#0f1424",
+  "icons": [
+    {
+      "src": "art/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
