@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 вариантов управления</title>
+<style>
+  body{margin:0;background:#0f1424;color:#fff;font-family:"Segoe UI",Arial,sans-serif;padding:16px}
+  h1{font-size:22px;margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:#1b2238;border-radius:14px;padding:10px}
+  .card h2{font-size:17px;margin:0 0 6px;color:#ffe08a}
+  .card p{font-size:13px;margin:6px 0 0;color:#cfd6e6;line-height:1.35}
+  canvas{width:100%;border-radius:10px;display:block;background:#6fb85e}
+</style>
+</head>
+<body>
+<h1>Варианты управления на телефоне — выбери номер</h1>
+<div class="grid" id="g"></div>
+<script>
+const V = [
+  ['1. Как сейчас', 'Джойстик справа внизу, кнопки ЛЁД / ЩИТ / РЫВОК слева внизу.', c => { joy(c, 250, 140); btns(c, 10, ['ЛЁД', 'ЩИТ', 'РЫВОК']); }],
+  ['2. Зеркально', 'Джойстик слева внизу, кнопки справа.', c => { joy(c, 70, 140); btns(c, 170, ['ЛЁД', 'ЩИТ', 'РЫВОК']); }],
+  ['3. Крестовина', 'Четыре стрелки вместо джойстика, бегун идёт строго по направлениям.', c => { dpad(c, 250, 140); btns(c, 10, ['ЛЁД', 'ЩИТ', 'РЫВОК']); }],
+  ['4. Плавающий', 'Джойстик появляется там, где коснулся правой половины. Кнопки слева.', c => { c.setLineDash([6, 6]); c.strokeStyle = '#ffffff88'; c.strokeRect(160, 10, 150, 160); c.setLineDash([]); joy(c, 230, 90, 0.7); txt(c, 'тут где угодно', 235, 150); btns(c, 10, ['ЛЁД', 'ЩИТ', 'РЫВОК']); }],
+  ['5. Тап по полю', 'Ткнул пальцем — бегун сам бежит туда и обходит препятствия. Кнопки внизу.', c => { hero(c, 90, 90); c.strokeStyle = '#ffe600'; c.setLineDash([5, 5]); c.beginPath(); c.moveTo(100, 90); c.quadraticCurveTo(170, 40, 230, 70); c.stroke(); c.setLineDash([]); finger(c, 235, 70); btns(c, 60, ['ЛЁД', 'ЩИТ', 'РЫВОК']); }],
+  ['6. Палец-поводок', 'Держишь палец — бегун бежит за ним как на верёвочке.', c => { hero(c, 110, 100); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(118, 100); c.lineTo(205, 65); c.stroke(); finger(c, 210, 62); btns(c, 10, ['ЛЁД', 'ЩИТ']); }],
+  ['7. Свайпы', 'Провёл в сторону — бежит туда, пока не свайпнешь иначе. Тап — лёд, два тапа — щит.', c => { hero(c, 150, 95); arrow(c, 150, 95, 230, 95); arrow(c, 150, 95, 150, 30); arrow(c, 150, 95, 70, 95); arrow(c, 150, 95, 150, 160); }],
+  ['8. Наклон телефона', 'Наклоняешь телефон — бегун катится в ту сторону. Кнопки на экране.', c => { c.save(); c.translate(160, 95); c.rotate(-0.25); c.strokeStyle = '#fff'; c.lineWidth = 4; c.strokeRect(-70, -36, 140, 72); c.restore(); hero(c, 120, 100); arrow(c, 140, 100, 200, 110); btns(c, 10, ['ЛЁД', 'ЩИТ']); }],
+  ['9. Два джойстика', 'Левый двигает, правый целится — куда отклонил, туда летит лёд. Нажал правый — щит.', c => { joy(c, 70, 140); joy(c, 250, 140); txt(c, 'ходить', 70, 60); txt(c, 'целиться', 250, 60); }],
+  ['10. Автобег', 'Бегун бежит сам всё время, ты только поворачиваешь его джойстиком. Быстрее и сложнее.', c => { hero(c, 120, 95); arrow(c, 135, 95, 200, 95); arrow(c, 200, 95, 240, 60); joy(c, 250, 140, 0.8); txt(c, 'только поворот', 250, 60); }],
+];
+function joy(c, x, y, k = 1) { c.fillStyle = 'rgba(255,255,255,0.18)'; c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 40 * k, 0, 7); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.arc(x + 10 * k, y - 6 * k, 18 * k, 0, 7); c.fill(); }
+function dpad(c, x, y) { c.fillStyle = 'rgba(255,255,255,0.35)'; for (const [a, b] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) { c.beginPath(); c.roundRect(x + a * 34 - 15, y + b * 34 - 15, 30, 30, 6); c.fill(); } c.fillStyle = '#fff'; c.font = 'bold 16px Arial'; c.textAlign = 'center'; c.fillText('▲', x, y - 28); c.fillText('▼', x, y + 40); c.fillText('◀', x - 34, y + 6); c.fillText('▶', x + 34, y + 6); }
+function btns(c, x, names) { names.forEach((n, i) => { c.fillStyle = ['#3b82f6', '#2ecc71', '#f39c12'][i]; c.beginPath(); c.roundRect(x + i * 48, 150, 44, 28, 6); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 9px Arial'; c.textAlign = 'center'; c.fillText(n, x + i * 48 + 22, 168); }); }
+function hero(c, x, y) { c.fillStyle = '#6b4a2b'; c.beginPath(); c.ellipse(x, y, 16, 9, 0, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.ellipse(x + 8, y - 8, 8, 7, 0, 0, 7); c.fill(); }
+function finger(c, x, y) { c.fillStyle = '#f1c27d'; c.beginPath(); c.arc(x, y, 9, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 14, 0, 7); c.stroke(); }
+function arrow(c, x1, y1, x2, y2) { c.strokeStyle = '#ffe600'; c.fillStyle = '#ffe600'; c.lineWidth = 3; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); const a = Math.atan2(y2 - y1, x2 - x1); c.beginPath(); c.moveTo(x2, y2); c.lineTo(x2 - Math.cos(a - 0.5) * 12, y2 - Math.sin(a - 0.5) * 12); c.lineTo(x2 - Math.cos(a + 0.5) * 12, y2 - Math.sin(a + 0.5) * 12); c.closePath(); c.fill(); }
+function txt(c, t, x, y) { c.fillStyle = '#fff'; c.font = '12px Arial'; c.textAlign = 'center'; c.fillText(t, x, y); }
+for (const [title, desc, draw] of V) {
+  const card = document.createElement('div'); card.className = 'card'; const cv = document.createElement('canvas'); cv.width = 320; cv.height = 190;
+  card.innerHTML = `<h2>${title}</h2>`; card.appendChild(cv); const p = document.createElement('p'); p.textContent = desc; card.appendChild(p); document.getElementById('g').appendChild(card);
+  const c = cv.getContext('2d'); c.fillStyle = '#5fa84f'; for (let i = 0; i < 6; i++) if (i % 2) c.fillRect(0, i * 32, 320, 32); draw(c);
+}
+</script>
+</body>
+</html>
