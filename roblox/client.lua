@@ -5,6 +5,9 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
 local remote = RS:WaitForChild("CatAction")
+local shopFn = RS:WaitForChild("ShopAction")
+local MPS = game:GetService("MarketplaceService")
+local Config = require(RS:WaitForChild("ShopConfig"))
 
 local gui = Instance.new("ScreenGui"); gui.Name = "CatGameUI"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Parent = plr:WaitForChild("PlayerGui")
 local function frame(props) local f = Instance.new("Frame"); f.BorderSizePixel = 0; for k, v in pairs(props) do f[k] = v end; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = f; return f end
@@ -40,6 +43,55 @@ local bDash = button("РЫВОК", Color3.fromRGB(243, 156, 18), -90, "dash")
 local hint = lbl(gui, { Size = UDim2.new(0, 260, 0, 18), Position = UDim2.new(0, 146, 1, -86), Text = "E — лёд · Q — щит · R — рывок", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 230, 230) })
 if UIS.TouchEnabled and not UIS.KeyboardEnabled then hint.Visible = false end
 
+-- ───────── магазин ─────────
+local shopBtn = Instance.new("TextButton"); shopBtn.Size = UDim2.new(0, 120, 0, 40); shopBtn.Position = UDim2.new(1, -136, 0, 60); shopBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182); shopBtn.TextColor3 = Color3.new(1, 1, 1); shopBtn.Font = Enum.Font.GothamBlack; shopBtn.TextScaled = true; shopBtn.Text = "🛒 МАГАЗИН"; shopBtn.Parent = gui
+do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = shopBtn end
+local shop = frame({ Size = UDim2.new(0.7, 0, 0.74, 0), Position = UDim2.new(0.15, 0, 0.13, 0), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.05, Visible = false, Parent = gui })
+lbl(shop, { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0.2, 0, 0, 8), Text = "Магазин", TextColor3 = Color3.fromRGB(255, 224, 138) })
+local closeBtn = Instance.new("TextButton"); closeBtn.Size = UDim2.new(0, 44, 0, 44); closeBtn.Position = UDim2.new(1, -54, 0, 8); closeBtn.Text = "✕"; closeBtn.TextScaled = true; closeBtn.Font = Enum.Font.GothamBlack; closeBtn.BackgroundColor3 = Color3.fromRGB(85, 85, 85); closeBtn.TextColor3 = Color3.new(1, 1, 1); closeBtn.Parent = shop
+do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = closeBtn end
+local list = Instance.new("ScrollingFrame"); list.Size = UDim2.new(0.96, 0, 1, -64); list.Position = UDim2.new(0.02, 0, 0, 58); list.BackgroundTransparency = 1; list.BorderSizePixel = 0; list.ScrollBarThickness = 8; list.AutomaticCanvasSize = Enum.AutomaticSize.Y; list.CanvasSize = UDim2.new(); list.Parent = shop
+local lay = Instance.new("UIListLayout"); lay.Padding = UDim.new(0, 8); lay.SortOrder = Enum.SortOrder.LayoutOrder; lay.Parent = list
+local order = 0
+local function header(text) order += 1; lbl(list, { Size = UDim2.new(1, 0, 0, 30), Text = text, TextColor3 = Color3.fromRGB(255, 224, 138), TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = order }) end
+local rows = {}
+local function row(title, desc, color, onClick, refresh)
+	order += 1
+	local r = frame({ Size = UDim2.new(1, -12, 0, 58), BackgroundColor3 = Color3.fromRGB(40, 46, 80), LayoutOrder = order, Parent = list })
+	if color then local sw = frame({ Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 9, 0, 9), BackgroundColor3 = color, Parent = r }) end
+	lbl(r, { Size = UDim2.new(0.5, 0, 0, 26), Position = UDim2.new(0, color and 60 or 12, 0, 5), Text = title, TextXAlignment = Enum.TextXAlignment.Left })
+	lbl(r, { Size = UDim2.new(0.5, 0, 0, 18), Position = UDim2.new(0, color and 60 or 12, 0, 33), Text = desc, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(200, 200, 210), Font = Enum.Font.Gotham })
+	local b = Instance.new("TextButton"); b.Size = UDim2.new(0, 170, 0, 42); b.Position = UDim2.new(1, -180, 0, 8); b.Font = Enum.Font.GothamBlack; b.TextScaled = true; b.TextColor3 = Color3.new(1, 1, 1); b.Parent = r
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = b
+	b.Activated:Connect(onClick); table.insert(rows, function() refresh(b) end)
+end
+local function hasPass(key) return table.find(string.split(plr:GetAttribute("Passes") or "", ","), key) ~= nil end
+local function ownsKit(K) if (K.coins or 0) == 0 and not K.pass then return true end; if K.pass then return hasPass(K.pass) end; return table.find(string.split(plr:GetAttribute("OwnedKits") or "", ","), K.key) ~= nil end
+local function toast(t) plr:SetAttribute("Msg", t); plr:SetAttribute("MsgId", (plr:GetAttribute("MsgId") or 0) + 0.5) end
+
+header("Пропуски — покупаются один раз")
+for _, key in ipairs(Config.PassOrder) do local ps = Config.Passes[key]
+	row(ps.name, ps.desc, nil, function() if hasPass(key) then return end; if ps.id > 0 then MPS:PromptGamePassPurchase(plr, ps.id) else toast("Пропуск скоро появится") end end,
+		function(b) if hasPass(key) then b.Text = "✓ ЕСТЬ"; b.BackgroundColor3 = Color3.fromRGB(46, 204, 113) elseif ps.id > 0 then b.Text = "R$ " .. ps.price; b.BackgroundColor3 = Color3.fromRGB(0, 162, 255) else b.Text = "скоро"; b.BackgroundColor3 = Color3.fromRGB(85, 85, 85) end end)
+end
+header("Монеты и энергия")
+for _, key in ipairs(Config.ProductOrder) do local pr = Config.Products[key]
+	row(pr.name, pr.coins and "монеты сразу на счёт" or "энергия до 100 прямо сейчас", nil, function() if pr.id > 0 then MPS:PromptProductPurchase(plr, pr.id) else toast("Скоро появится") end end,
+		function(b) if pr.id > 0 then b.Text = "R$ " .. pr.price; b.BackgroundColor3 = Color3.fromRGB(0, 162, 255) else b.Text = "скоро"; b.BackgroundColor3 = Color3.fromRGB(85, 85, 85) end end)
+end
+header("Форма Леона")
+for _, K in ipairs(Config.Kits) do
+	row(K.name, K.pass and ("по пропуску «" .. Config.Passes[K.pass].name .. "»") or (K.coins > 0 and (K.coins .. " монет") or "бесплатно"), Color3.fromRGB(K.torso[1], K.torso[2], K.torso[3]),
+		function() local action = ownsKit(K) and "equipKit" or "buyKit"; if K.pass and not ownsKit(K) then local ps = Config.Passes[K.pass]; if ps.id > 0 then MPS:PromptGamePassPurchase(plr, ps.id) else toast("Пропуск скоро появится") end; return end; local ok, m = shopFn:InvokeServer(action, K.key); toast(m) end,
+		function(b) if plr:GetAttribute("Kit") == K.key then b.Text = "НАДЕТА"; b.BackgroundColor3 = Color3.fromRGB(46, 204, 113) elseif ownsKit(K) then b.Text = "НАДЕТЬ"; b.BackgroundColor3 = Color3.fromRGB(59, 130, 246) elseif K.pass then b.Text = "ПРОПУСК"; b.BackgroundColor3 = Color3.fromRGB(85, 85, 85) else b.Text = "₽ " .. K.coins; b.BackgroundColor3 = Color3.fromRGB(243, 156, 18) end end)
+end
+shopBtn.Activated:Connect(function() shop.Visible = not shop.Visible end)
+closeBtn.Activated:Connect(function() shop.Visible = false end)
+-- воскрешение после проигрыша
+local revive = Instance.new("TextButton"); revive.Size = UDim2.new(0, 300, 0, 64); revive.Position = UDim2.new(0.5, -150, 0.5, -32); revive.BackgroundColor3 = Color3.fromRGB(46, 204, 113); revive.TextColor3 = Color3.new(1, 1, 1); revive.Font = Enum.Font.GothamBlack; revive.TextScaled = true; revive.Text = "ВОСКРЕСНУТЬ · R$ " .. Config.Products.Revive.price; revive.Visible = false; revive.Parent = gui
+do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 14); c.Parent = revive end
+revive.Activated:Connect(function() if Config.Products.Revive.id > 0 then MPS:PromptProductPurchase(plr, Config.Products.Revive.id) end end)
+
 UIS.InputBegan:Connect(function(inp, processed)
 	if processed then return end
 	if inp.KeyCode == Enum.KeyCode.E then remote:FireServer("ice")
@@ -51,7 +103,7 @@ local lastMsg, msgT = -1, 0
 RunService.RenderStepped:Connect(function(dt)
 	local a = function(n, d) local v = plr:GetAttribute(n); if v == nil then return d end; return v end
 	lvl.Text = "Мир «" .. a("World", "Двор") .. "» · уровень " .. a("Level", 1)
-	local lives = a("Lives", 3); hearts.Text = string.rep("❤", math.max(0, lives)) .. string.rep("♡", math.max(0, 3 - lives))
+	local lives, maxL = a("Lives", 3), a("MaxLives", 3); hearts.Text = string.rep("❤", math.max(0, lives)) .. string.rep("♡", math.max(0, maxL - lives))
 	local e = math.clamp(a("Energy", 100), 0, 100); ebar.Size = UDim2.new(e / 100, 0, 1, 0); ebar.BackgroundColor3 = e > 50 and Color3.fromRGB(124, 252, 154) or e > 20 and Color3.fromRGB(255, 209, 102) or Color3.fromRGB(255, 82, 82); etxt.Text = "⚡ " .. e
 	local ls = plr:FindFirstChild("leaderstats"); if ls and ls:FindFirstChild("Coins") then coins.Text = "₽ " .. ls.Coins.Value end
 	local hp, mx = a("MonsterHP", 0), a("MonsterMax", 1); mbar.Size = UDim2.new(math.clamp(hp / math.max(1, mx), 0, 1), 0, 1, 0)
@@ -60,6 +112,8 @@ RunService.RenderStepped:Connect(function(dt)
 	local ch = a("Charges", 0); bIce.Text = "ЛЁД ×" .. ch; bShield.Text = "ЩИТ ×" .. ch
 	bIce.BackgroundColor3 = ch > 0 and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(85, 85, 85); bShield.BackgroundColor3 = ch > 0 and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(85, 85, 85)
 	local dc = a("DashCd", 0); bDash.Text = dc > 0 and string.format("РЫВОК %.1f", dc) or "РЫВОК"; bDash.BackgroundColor3 = dc > 0 and Color3.fromRGB(85, 85, 85) or Color3.fromRGB(243, 156, 18)
+	revive.Visible = a("CanRevive", false) == true
+	if shop.Visible then for _, f in ipairs(rows) do f() end end
 	local id = a("MsgId", 0); if id ~= lastMsg then lastMsg = id; msg.Text = a("Msg", ""); msgT = 2.2 end
 	msgT -= dt; msg.TextTransparency = math.clamp(1 - msgT, 0, 1); msg.TextStrokeTransparency = math.clamp(1 - msgT, 0, 1)
 	-- камера сверху под углом, как в веб-версии

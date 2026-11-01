@@ -5,6 +5,13 @@ local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
+local DSS = game:GetService("DataStoreService")
+local MPS = game:GetService("MarketplaceService")
+local Config = require(RS:WaitForChild("ShopConfig"))
+local store = nil
+pcall(function() store = DSS:GetDataStore("CatGame_v1") end)
+local shopFn = RS:FindFirstChild("ShopAction") or Instance.new("RemoteFunction")
+shopFn.Name = "ShopAction"; shopFn.Parent = RS
 local remote = RS:FindFirstChild("CatAction") or Instance.new("RemoteEvent")
 remote.Name = "CatAction"; remote.Parent = RS
 
@@ -43,7 +50,27 @@ local function sync()
 	local t = G.task
 	if t then pl:SetAttribute("TaskText", t.text); pl:SetAttribute("TaskDone", t.done); pl:SetAttribute("TaskNeed", t.need) else pl:SetAttribute("TaskText", G.charges > 0 and ("Зарядов: " .. G.charges .. " — E лёд, Q щит") or ""); pl:SetAttribute("TaskDone", 0); pl:SetAttribute("TaskNeed", 0) end
 	local ls = pl:FindFirstChild("leaderstats"); if ls then ls.Level.Value = G.level; ls.Coins.Value = G.coins end
+	pl:SetAttribute("MaxLives", (G.passes and G.passes.ExtraHeart) and 4 or 3); pl:SetAttribute("CanRevive", G.result == "lose" and G.canRevive == true)
+	pl:SetAttribute("Kit", G.kit or "barca"); pl:SetAttribute("OwnedKits", table.concat(G.owned or {}, ","))
+	local ps = {}; for k, v in pairs(G.passes or {}) do if v then table.insert(ps, k) end end; pl:SetAttribute("Passes", table.concat(ps, ","))
 end
+
+-- ───────── сохранение, пропуски, монеты ─────────
+local function saveData()
+	if not G or not G.player or not store or not G.loaded then return end
+	local d = { level = G.level, best = G.best, coins = G.coins, owned = G.owned, kit = G.kit }
+	local ok, err = pcall(function() store:SetAsync("p_" .. G.player.UserId, d) end)
+	if not ok then warn("Сохранение не удалось: " .. tostring(err)) end
+end
+local function loadData(plr)
+	if not store then return {} end
+	local ok, res = pcall(function() return store:GetAsync("p_" .. plr.UserId) end)
+	if not ok then warn("Загрузка не удалась (опубликуй игру и включи API Services): " .. tostring(res)); return {} end
+	return res or {}
+end
+local function addCoins(n) G.coins += n * ((G.passes and G.passes.DoubleCoins) and 2 or 1) end
+local function kitByKey(k) for _, K in ipairs(Config.Kits) do if K.key == k then return K end end; return Config.Kits[1] end
+local function ownsKit(k) local K = kitByKey(k); if K.coins == 0 then return true end; if K.pass then return G.passes[K.pass] == true end; return table.find(G.owned, k) ~= nil end
 
 -- ───────── ловушки ─────────
 local function kindsFor(level)
@@ -197,7 +224,7 @@ end
 local function hrpOf() local c = G and G.player and G.player.Character; return c and c:FindFirstChild("HumanoidRootPart"), c and c:FindFirstChildOfClass("Humanoid") end
 local function buildLevel(level)
 	LevelFolder:ClearAllChildren()
-	G.level = level; G.zones = {}; G.taskN = 0; G.task = nil; G.charges = 0; G.result = nil; G.bitten = false; G.energy = 100; G.lives = 3; G.inv = 2; G.poison = 0; G.dirty = false; G.trapCd = 0
+	G.level = level; G.zones = {}; G.taskN = 0; G.task = nil; G.charges = (G.passes and G.passes.VIP) and 1 or 0; G.result = nil; G.bitten = false; G.energy = 100; G.lives = (G.passes and G.passes.ExtraHeart) and 4 or 3; G.canRevive = false; G.inv = 2; G.poison = 0; G.dirty = false; G.trapCd = 0
 	local solids = Instance.new("Folder"); solids.Name = "Solids"; solids.Parent = LevelFolder
 	local kinds = kindsFor(level)
 	local count = level == 1 and 0 or math.min(10, 2 + math.floor(level / 3) + math.random(0, 2))
@@ -228,8 +255,10 @@ end
 local function loseLife(reason)
 	G.lives -= 1; G.energy = 100; G.inv = 2
 	if G.lives <= 0 then
-		G.result = "lose"; say(G.player, "Съели! Начинаем уровень заново…"); sync()
-		task.delay(3, function() if G and G.result == "lose" then buildLevel(G.level) end end)
+		G.result = "lose"; G.canRevive = Config.Products.Revive.id > 0
+		say(G.player, G.canRevive and "Съели! Можно воскреснуть на месте — или уровень заново через 8 с" or "Съели! Начинаем уровень заново…"); sync()
+		local myLevel = G.level
+		task.delay(G.canRevive and 8 or 3, function() if G and G.result == "lose" and G.level == myLevel then buildLevel(G.level) end end)
 	else
 		say(G.player, (reason or "Энергия кончилась!") .. " Осталось жизней: " .. G.lives)
 		local hrp = hrpOf(); if hrp then hrp.CFrame = CFrame.new(SPAWN) end
@@ -246,11 +275,11 @@ local function win()
 	G.result = "win"
 	local clean = not G.bitten
 	local bonus = 5 + G.level + (G.cat.boss and 20 or 0) + (clean and 100 or 0)
-	G.coins += bonus
+	addCoins(bonus)
 	say(G.player, "ПОБЕДА! +" .. bonus .. " монет" .. (clean and " (100 ₽ — ни одного укуса!)" or ""))
 	for _, s in ipairs(G.cat.segs) do shard(s.pos, Color3.fromRGB(255, 215, 0)) end
 	sync()
-	task.delay(3.5, function() if G and G.result == "win" then buildLevel(G.level + 1) end end)
+	G.best = math.max(G.best or 1, G.level + 1); task.delay(3.5, function() if G and G.result == "win" then buildLevel(G.level + 1); saveData() end end)
 end
 
 -- ───────── действия игрока ─────────
@@ -299,11 +328,11 @@ RunService.Heartbeat:Connect(function(dt)
 	local now = os.clock()
 	for _, z in ipairs(G.zones) do if z.kind == "laser" then z.on = ((now + z.phase) % 3) < 1.6; z.beam.Transparency = z.on and 0 or 0.85 end end
 	-- монетки на поле
-	for i = #G.coinsOnField, 1, -1 do local c = G.coinsOnField[i]; c.part.CFrame = CFrame.new(c.pos + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(c.pos, ppos) < 3.5 then c.part:Destroy(); table.remove(G.coinsOnField, i); G.coins += 1; say(G.player, "+1 монета") end end
+	for i = #G.coinsOnField, 1, -1 do local c = G.coinsOnField[i]; c.part.CFrame = CFrame.new(c.pos + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(c.pos, ppos) < 3.5 then c.part:Destroy(); table.remove(G.coinsOnField, i); addCoins(1); say(G.player, (G.passes.DoubleCoins and "+2 монеты" or "+1 монета")) end end
 	-- задание
 	local t = G.task
 	if t and not G.result then
-		if t.type == "collect" then for _, it in ipairs(t.items) do if not it.got then it.part.CFrame = CFrame.new(it.pos + Vector3.new(0, 2, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(it.pos, ppos) < 4 then it.got = true; it.part:Destroy(); t.done += 1; G.coins += 1 end end end
+		if t.type == "collect" then for _, it in ipairs(t.items) do if not it.got then it.part.CFrame = CFrame.new(it.pos + Vector3.new(0, 2, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(it.pos, ppos) < 4 then it.got = true; it.part:Destroy(); t.done += 1; addCoins(1) end end end
 		elseif t.type == "rings" then local it = t.items[t.done + 1]; if it and dxz(it.pos, ppos) < 3.8 then it.got = true; it.part:Destroy(); t.done += 1; local nx = t.items[t.done + 1]; if nx then nx.part.Transparency = 0.2 end end
 		elseif t.type == "buttons" then for _, it in ipairs(t.items) do if not it.got and dxz(it.pos, ppos) < 3.5 then it.got = true; it.part.Color = Color3.fromRGB(46, 204, 113); it.part.CFrame = it.part.CFrame - Vector3.new(0, 0.3, 0); t.done += 1 end end
 		elseif t.type == "mouse" then local it = t.items[1]; local d = dxz(it.pos, ppos); if d < 22 then local away = flat(it.pos) - flat(ppos); away = away.Magnitude > 0 and away.Unit or Vector3.new(1, 0, 0); it.pos = it.pos + away * 12.5 * dt; it.pos = Vector3.new(math.clamp(it.pos.X, -HX + 3, HX - 3), FLOOR, math.clamp(it.pos.Z, -HZ + 3, HZ - 3)); it.part.CFrame = CFrame.lookAt(it.pos + Vector3.new(0, 0.8, 0), it.pos + Vector3.new(0, 0.8, 0) - away) end; if d < 3.2 then it.part:Destroy(); t.done = 1 end end
@@ -376,19 +405,28 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 -- ───────── игроки ─────────
+local function rgb(t) return Color3.fromRGB(t[1], t[2], t[3]) end
 local function dressLeon(char)
+	local K = kitByKey(G and G.kit or "barca")
+	for _, o in ipairs(char:GetDescendants()) do if o:IsA("SurfaceGui") and o.Name == "Kit" then o:Destroy() end end
+	local oldVip = char:FindFirstChild("Head") and char.Head:FindFirstChild("VIP"); if oldVip then oldVip:Destroy() end
 	local bc = char:FindFirstChildOfClass("BodyColors") or Instance.new("BodyColors", char)
-	bc.TorsoColor3 = Color3.fromRGB(29, 63, 143); bc.LeftLegColor3 = Color3.fromRGB(0, 77, 152); bc.RightLegColor3 = Color3.fromRGB(0, 77, 152)
+	bc.TorsoColor3 = rgb(K.torso); bc.LeftLegColor3 = rgb(K.legs); bc.RightLegColor3 = rgb(K.legs)
 	bc.HeadColor3 = Color3.fromRGB(243, 214, 188); bc.LeftArmColor3 = Color3.fromRGB(243, 214, 188); bc.RightArmColor3 = Color3.fromRGB(243, 214, 188)
 	for _, n in ipairs({ "Shirt", "Pants" }) do local o = char:FindFirstChildOfClass(n); if o then o:Destroy() end end
 	local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
 	if torso then
-		local sg = Instance.new("SurfaceGui"); sg.Face = Enum.NormalId.Back; sg.CanvasSize = Vector2.new(200, 200); sg.Parent = torso
+		local sg = Instance.new("SurfaceGui"); sg.Name = "Kit"; sg.Face = Enum.NormalId.Back; sg.CanvasSize = Vector2.new(200, 200); sg.Parent = torso
 		local f = Instance.new("Frame"); f.Size = UDim2.fromScale(1, 1); f.BackgroundTransparency = 1; f.Parent = sg
-		for i = 0, 2 do local st = Instance.new("Frame"); st.Size = UDim2.new(0.16, 0, 1, 0); st.Position = UDim2.new(0.08 + i * 0.3, 0, 0, 0); st.BackgroundColor3 = Color3.fromRGB(163, 25, 58); st.BorderSizePixel = 0; st.Parent = f end
-		local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0.3, 0); tl.BackgroundTransparency = 1; tl.Text = "LEON"; tl.TextColor3 = Color3.fromRGB(237, 187, 0); tl.TextScaled = true; tl.Font = Enum.Font.GothamBlack; tl.Parent = f
+		for i = 0, 2 do local st = Instance.new("Frame"); st.Size = UDim2.new(0.16, 0, 1, 0); st.Position = UDim2.new(0.08 + i * 0.3, 0, 0, 0); st.BackgroundColor3 = rgb(K.stripe); st.BorderSizePixel = 0; st.Parent = f end
+		local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1, 0, 0.3, 0); tl.BackgroundTransparency = 1; tl.Text = "LEON"; tl.TextColor3 = rgb(K.text); tl.TextScaled = true; tl.Font = Enum.Font.GothamBlack; tl.Parent = f
 		local nl = tl:Clone(); nl.Text = "17"; nl.Position = UDim2.new(0, 0, 0.3, 0); nl.Size = UDim2.new(1, 0, 0.6, 0); nl.Parent = f
 		local front = sg:Clone(); front.Face = Enum.NormalId.Front; front.Parent = torso; front.Frame.TextLabel:Destroy(); local fl = front.Frame:FindFirstChildOfClass("TextLabel"); if fl then fl.Size = UDim2.new(0.3, 0, 0.3, 0); fl.Position = UDim2.new(0.62, 0, 0.1, 0) end
+	end
+	if G and G.passes and G.passes.VIP and char:FindFirstChild("Head") then
+		local bb = Instance.new("BillboardGui"); bb.Name = "VIP"; bb.Size = UDim2.new(0, 70, 0, 26); bb.StudsOffset = Vector3.new(0, 2.6, 0); bb.AlwaysOnTop = true; bb.Parent = char.Head
+		local t = Instance.new("TextLabel"); t.Size = UDim2.fromScale(1, 1); t.BackgroundColor3 = Color3.fromRGB(255, 215, 0); t.Text = "VIP"; t.Font = Enum.Font.GothamBlack; t.TextScaled = true; t.TextColor3 = Color3.fromRGB(29, 63, 143); t.Parent = bb
+		local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 8); c.Parent = t
 	end
 end
 
@@ -396,11 +434,57 @@ Players.PlayerAdded:Connect(function(plr)
 	local ls = Instance.new("Folder"); ls.Name = "leaderstats"; ls.Parent = plr
 	local lv = Instance.new("IntValue"); lv.Name = "Level"; lv.Value = 1; lv.Parent = ls
 	local co = Instance.new("IntValue"); co.Name = "Coins"; co.Value = 0; co.Parent = ls
-	G = { player = plr, coins = 0, dashCd = 0, balls = {}, fire = {}, level = 1, zones = {} }
-	plr.CharacterAdded:Connect(function(char)
+	G = { player = plr, coins = 0, dashCd = 0, balls = {}, fire = {}, level = 1, best = 1, zones = {}, owned = {}, kit = "barca", passes = {}, loaded = false }
+	local data = loadData(plr)
+	G.level = data.level or 1; G.best = data.best or G.level; G.coins = data.coins or 0; G.owned = data.owned or {}; G.kit = data.kit or "barca"
+	for key, ps in pairs(Config.Passes) do if ps.id > 0 then local ok, has = pcall(function() return MPS:UserOwnsGamePassAsync(plr.UserId, ps.id) end); G.passes[key] = ok and has or false end end
+	if not ownsKit(G.kit) then G.kit = "barca" end
+	G.loaded = true
+	local function onChar(char)
 		task.wait(0.2); dressLeon(char)
 		local hum = char:WaitForChild("Humanoid"); hum.MaxHealth = math.huge; hum.Health = math.huge
 		if not G.cat then buildLevel(G.level) else local hrp = char:WaitForChild("HumanoidRootPart"); hrp.CFrame = CFrame.new(SPAWN) end
-	end)
+	end
+	plr.CharacterAdded:Connect(onChar)
+	if plr.Character then task.spawn(onChar, plr.Character) end
 end)
-Players.PlayerRemoving:Connect(function(plr) if G and G.player == plr then LevelFolder:ClearAllChildren(); G = nil end end)
+Players.PlayerRemoving:Connect(function(plr) if G and G.player == plr then saveData(); LevelFolder:ClearAllChildren(); G = nil end end)
+game:BindToClose(function() saveData() end)
+task.spawn(function() while true do task.wait(45); saveData() end end)
+
+-- ───────── магазин: формы за монеты, пропуски и покупки за Robux ─────────
+shopFn.OnServerInvoke = function(plr, action, arg)
+	if not G or plr ~= G.player then return false, "Подожди" end
+	if action == "buyKit" then
+		local K = kitByKey(arg); if not K or K.pass then return false, "Эту форму открывает пропуск" end
+		if ownsKit(arg) then return false, "Уже есть" end
+		if G.coins < K.coins then return false, "Не хватает монет" end
+		G.coins -= K.coins; table.insert(G.owned, K.key); G.kit = K.key; saveData(); sync()
+		if plr.Character then dressLeon(plr.Character) end
+		return true, "Куплена форма «" .. K.name .. "»"
+	elseif action == "equipKit" then
+		if not ownsKit(arg) then return false, "Сначала купи" end
+		G.kit = arg; saveData(); sync(); if plr.Character then dressLeon(plr.Character) end
+		return true, "Надета форма «" .. kitByKey(arg).name .. "»"
+	end
+	return false, "?"
+end
+MPS.PromptGamePassPurchaseFinished:Connect(function(plr, passId, bought)
+	if not bought or not G or plr ~= G.player then return end
+	for key, ps in pairs(Config.Passes) do if ps.id == passId then G.passes[key] = true; say(plr, "Спасибо! Пропуск «" .. ps.name .. "» открыт") end end
+	if plr.Character then dressLeon(plr.Character) end; sync()
+end)
+MPS.ProcessReceipt = function(info)
+	local plr = Players:GetPlayerByUserId(info.PlayerId)
+	if not plr or not G or G.player ~= plr or not G.loaded then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	local key; for k, pr in pairs(Config.Products) do if pr.id == info.ProductId then key = k end end
+	if not key then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	local pr = Config.Products[key]
+	if pr.coins then G.coins += pr.coins; say(plr, "+" .. pr.coins .. " монет — спасибо!")
+	elseif key == "Revive" then
+		if G.result == "lose" then G.result = nil; G.canRevive = false; G.lives = G.passes.ExtraHeart and 4 or 3; G.energy = 100; G.inv = 2; say(plr, "Воскрес! Играем дальше")
+		else G.coins += 15; say(plr, "Воскрешение не понадобилось — +15 монет") end
+	elseif key == "Energy" then G.energy = 100; say(plr, "Энергия полная!") end
+	saveData(); sync()
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
