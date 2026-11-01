@@ -430,7 +430,7 @@ function drawBoy(x, y, s, o = {}) {
   jersey(0, -26, 36, 32, f.shirt, back);
   // руки — качаются в противофазе ногам
   if (!o.noArms) for (const side of [-1, 1]) {
-    ctx.save(); ctx.translate(side * 24.5, -11); drawArm(o.arm === undefined ? (S.arm || 0) : o.arm, side);
+    ctx.save(); ctx.translate(side * 24.5, -11); drawArm(o.arm === undefined ? (S.arm || 0) : o.arm, side); if (o.gloves) drawGlove(0, 12.5, 1.15, side); // перчатка поверх кисти
     ctx.restore();
   }
   if (!back && !o.noString) {
@@ -751,7 +751,7 @@ function drawFootball() {
   // вратарь и бьющий: когда ты бьёшь — Леон бьёт, Ник в воротах; потом наоборот
   const me = footMe(), shooterIsBoy = F.youShoot ? me === 'boy' : me === 'cat', keeperIsCat = shooterIsBoy, kx = F.keeperX, ky = g.y + 10, lean = clamp((F.keeperTgt - F.keeperX) / 60, -1, 1), moving = Math.abs(F.keeperTgt - F.keeperX) > 8;
   const diving = moving && (F.phase === 'fly' || F.phase === 'wait'), jump = diving ? Math.abs(Math.sin(t * 9)) * 18 : 0; ctx.save(); if (diving) { ctx.translate(kx, ky + 20); ctx.rotate(lean * 0.9); ctx.translate(-kx, -ky - 20 + jump * 0.3); }
-  if (keeperIsCat) drawCatStanding(kx, ky + 26 - jump, 1.1, { legT: moving ? t * 10 : 0, flip: lean < 0, gloves: true, mood: moving ? 'shock' : 'happy' }); else { drawBoy(kx, ky + 22 - jump, 1.25, { legT: moving ? t * 10 : 0, flip: lean < 0, mouth: 0.2, blink: Math.floor(t * 2) % 7 === 0 }); for (const sd of [-1, 1]) drawGlove(kx + sd * 30, ky + 22 + 20 - jump - (diving ? 46 : 0), 1.25, sd); }
+  if (keeperIsCat) drawCatStanding(kx, ky + 26 - jump, 1.1, { legT: moving ? t * 10 : 0, flip: lean < 0, gloves: true, mood: moving ? 'shock' : 'happy' }); else { drawBoy(kx, ky + 22 - jump, 1.25, { gloves: true, legT: moving ? t * 10 : 0, flip: lean < 0, mouth: 0.2, blink: Math.floor(t * 2) % 7 === 0 }); }
   ctx.restore();
   if (F.phase !== 'over') { const sx = W / 2 + (F.phase === 'aim' || F.phase === 'wait' ? -40 : -70), sy = H - 150; if (shooterIsBoy) drawBoy(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? 6 : 0, mouth: 0.4, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatStanding(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? t * 10 : 0 }); }
   drawReferee(W / 2 + 250, H - 200, 1.25, { legT: 0, whistle: F.phase === 'result' || F.phase === 'over', blink: Math.floor(t * 2) % 7 === 0 });
@@ -827,7 +827,7 @@ function drawGoal(g, side) { // ворота: сетка в глубину, то
 }
 function drawMatch() {
   const g = MG(), b = M.ball, t = performance.now() / 1000; drawPitch(g); drawGoal(g, 0); drawGoal(g, 1);
-  const ents = [M.L, M.R].map(e => ({ y: e.y, d: () => { ctx.save(); if (e.tackle > 0) { ctx.translate(e.x, e.y + 30); ctx.rotate((e.flip ? 1 : -1) * 1.1); ctx.translate(-e.x, -e.y - 30); } if (e.frozen > 0 && e.tackle <= 0) ctx.globalAlpha = 0.6; if (e.who === 'boy') { drawBoy(e.x, e.y + 20, 1.25, { flip: e.flip, legT: e.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); for (const sd of [-1, 1]) drawGlove(e.x + sd * 30 * (e.flip ? -1 : 1), e.y + 20 + 20 * 1.25, 1.25, sd); } else drawCatStanding(e.x, e.y + 20, 1.1, { flip: e.flip, legT: e.legT, gloves: true, mood: e.dive > 0 ? 'shock' : 'happy' }); ctx.restore(); } }));
+  const ents = [M.L, M.R].map(e => ({ y: e.y, d: () => { ctx.save(); if (e.tackle > 0) { ctx.translate(e.x, e.y + 30); ctx.rotate((e.flip ? 1 : -1) * 1.1); ctx.translate(-e.x, -e.y - 30); } if (e.frozen > 0 && e.tackle <= 0) ctx.globalAlpha = 0.6; if (e.who === 'boy') { drawBoy(e.x, e.y + 20, 1.25, { gloves: true, flip: e.flip, legT: e.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); } else drawCatStanding(e.x, e.y + 20, 1.1, { flip: e.flip, legT: e.legT, gloves: true, mood: e.dive > 0 ? 'shock' : 'happy' }); ctx.restore(); } }));
   ents.push({ y: b.y + 1, d: () => drawBall(b.x, b.y, 22, 0, b.rot) });
   const whistle = M.pauseT > 0 || (M.goalFlash || 0) > 0; drawReferee(W / 2 + 170, g.fy + 90, 1.25, { legT: 0, whistle: whistle || M.cardT > 0, card: M.cardT > 0 ? M.card : null, blink: Math.floor(t * 2) % 7 === 0 }); if (whistle || M.cardT > 0) text('ФИИИ!', W / 2 + 235, g.fy + 40, 16, '#fff'); if (M.t > 110) text('судья — брат Леона, № 12', W / 2 + 170, g.fy + 150, 13, '#fff');
   if (M.cardT > 0) { const col = M.card === 'red' ? '#e63946' : M.card === 'green' ? '#2ecc71' : '#ffd700'; ctx.fillStyle = col; ctx.beginPath(); rr(W / 2 - 30, H / 2 - 95, 60, 84, 6); ctx.fill(); ctx.strokeStyle = '#0006'; ctx.lineWidth = 3; ctx.stroke(); }
@@ -875,7 +875,7 @@ function drawFootballMenu() {
   const pm = penMode(); btn(W / 2 - 220, 462, 440, 36, 'В пенальти: ' + (pm === 'alt' ? 'бью и стою в воротах по очереди' : pm === 'shoot' ? 'только бью' : 'только стою в воротах'), () => { S.penMode = pm === 'alt' ? 'shoot' : pm === 'shoot' ? 'keep' : 'alt'; save(); }, '#555', true);
   btn(W / 2 - 220, 406, 210, 44, 'Перчатки: ' + GLOVES[Math.min(S.glove || 0, GLOVES.length - 1)].n, () => { S.glove = ((S.glove || 0) + 1) % GLOVES.length; save(); }, '#3b82f6', true);
   btn(W / 2 + 10, 406, 210, 44, 'В главное меню', () => screen = 'menu', '#555', true);
-  const t = performance.now() / 1000; drawBoy(W / 2 - 330, 330, 1.6, { legT: t * 6, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); for (const sd of [-1, 1]) drawGlove(W / 2 - 330 + sd * 39, 330 + 32, 1.6, sd); drawCatStanding(W / 2 + 330, 330, 1.6, { legT: t * 6, flip: true, gloves: true });
+  const t = performance.now() / 1000; drawBoy(W / 2 - 330, 330, 1.6, { gloves: true, legT: t * 6, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); drawCatStanding(W / 2 + 330, 330, 1.6, { legT: t * 6, flip: true, gloves: true });
 }
 // ───────────────────────── Ник в форме: стоит на двух лапах ─────────────────────────
 const NICK_KITS = [ // [основной, полосы, шорты, гетры, номер]
