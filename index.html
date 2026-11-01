@@ -673,19 +673,21 @@ function startLevel(level) {
   const hits = 3 + Math.floor(liw / 5), hp = 100 * liw; // выстрелов до победы: 3–7, то есть минимум два задания  // 100, 200, 300… уронов
   G = {
     level, world: w, liw, who, t: 0, result: null, resultT: 0, boyScale, hits,
-    runner: { x: 150, y: H / 2, r: 24, speed: 235, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
+    runner: { x: 150, y: H / 2, r: 24, speed: who === 'cat' ? 215 : 225, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
     boss: liw === LEVELS_PER_WORLD, // последний уровень мира: босс с автоматом и 5 сердцами (мальчик или кот — кто гонится)
-    monster: { r: 22 + Math.min(10, w * 2), speed: Math.min(165, 92 + level * 0.4 + w * 5), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
+    monster: { r: 22 + Math.min(10, w * 2), speed: Math.min(150, 84 + level * 0.35 + w * 4), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
     obstacles: [], coins: [], bullets: [], mBullets: [], spitT: 5, task: null, charged: false, taskN: 0,
     shield: { on: 0, cd: 0 }, meowT: 2, particles: [], introT: 3.2, earned: 0, charges: 0,
   };
   const nseg = 9 + w * 2; for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 14, y: H / 2 });
   if (G.boss) { G.monster.hp = G.monster.maxHp = Math.round(hp * 1.5); G.monster.dmg = Math.ceil(G.monster.maxHp / 7); G.monster.speed = Math.min(170, G.monster.speed * 0.8); G.monster.r = 30; G.burstT = 3; G.burstLeft = 0; }
   // препятствия
-  const n = Math.min(22, 6 + w + Math.floor(liw / 2.5) + Math.floor(R() * 4) - 1); // с каждым уровнем больше, с разбросом
+  const kinds = ['pool', 'rock', 'wall']; // обычные препятствия со 2-го уровня
+  if (level >= 2) kinds.push('thorns'); if (level >= 3) kinds.push('spikes'); if (level >= 4) kinds.push('lava'); if (level >= 5) kinds.push('mud'); if (level >= 8) kinds.push('laser'); if (level >= 10) kinds.push('fence');
+  const n = level === 1 ? 0 : Math.min(22, 3 + w + Math.floor(level / 2) + Math.floor(R() * 4)); // первый уровень — чистое поле, дальше всё больше
   for (let i = 0; i < n; i++) {
     for (let tries = 0; tries < 40; tries++) {
-      const kr = R(), kind = kr < 0.16 ? 'pool' : kr < 0.27 ? 'rock' : kr < 0.38 ? 'mud' : kr < 0.47 ? 'fence' : kr < 0.58 ? 'thorns' : kr < 0.68 ? 'spikes' : kr < 0.77 ? 'lava' : kr < 0.88 ? 'laser' : 'wall';
+      const kind = kinds[Math.floor(R() * kinds.length)];
       const o = kind === 'laser' ? (R() < 0.5 ? { x: 90 + R() * (W - 340), y: 70 + R() * (H - 200), w: 150 + R() * 130, h: 8, kind, phase: R() * 3 } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 300), w: 8, h: 110 + R() * 110, kind, phase: R() * 3 }) : kind === 'fence' ? { x: 90 + R() * (W - 300), y: 70 + R() * (H - 200), w: 120 + R() * 120, h: 14, kind } : kind === 'rock' ? { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 44 + R() * 30, h: 40 + R() * 24, kind } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 50 + R() * 110, h: 40 + R() * 90, kind };
       if (circleRect({ x: 150, y: H / 2, r: 110 }, o) || circleRect({ x: W - 150, y: H / 2, r: 140 }, o)) continue;
       if (G.obstacles.some(q => o.x < q.x + q.w + 26 && o.x + o.w + 26 > q.x && o.y < q.y + q.h + 26 && o.y + o.h + 26 > q.y)) continue;
@@ -817,6 +819,7 @@ function update(dt) {
   if (m.stun <= 0) {
     const race = G.treat && G.treat.shown && !G.treat.got && !G.treat.eaten;
     let tgt = race ? G.treat : r;
+    if (G.boss) { const want = Math.atan2(r.y - head.y, r.x - head.x); let df = want - (m.face === undefined ? (m.face = want) : m.face); df = Math.atan2(Math.sin(df), Math.cos(df)); m.face += clamp(df, -1.1 * dt, 1.1 * dt); } // босс поворачивает щит медленно
     if (G.boss && !race && dist(r, head) < 200) { tgt = { x: head.x + (head.x - r.x), y: head.y + (head.y - r.y) }; } // босс не лезет вплотную, стреляет издали
     if (!race) { let nc = null, nd = 170; for (const c of G.coins) if (!c.got) { const dc = dist(c, head); if (dc < nd) { nd = dc; nc = c; } } if (nc && dist(r, head) > 160) tgt = nc; }
     let ax = tgt.x - head.x, ay = tgt.y - head.y; const d = Math.hypot(ax, ay) || 1; ax /= d; ay /= d;
@@ -868,8 +871,14 @@ function update(dt) {
   }
   G.mBullets = G.mBullets.filter(b => !b.dead);
   // пули
-  for (const b of G.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; if (m.segs.some(s => Math.hypot(s.x - b.x, s.y - b.y) < m.r + b.r)) { b.dead = true; hurt(b.ice ? 5 : 1.6); if (b.ice) { m.frozen = 5; const h = m.segs[0]; say('ЗАМЁРЗ! ❄', h.x, h.y - 70, '#9ad6ff', 1.2); for (let i = 0; i < 16; i++) G.particles.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.5) * 260, life: 0.6, col: '#bfe9ff' }); } } if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence' || o.kind === 'maze') && circleRect(b, o))) b.dead = true; }
+  for (const b of G.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; if (m.segs.some(s => Math.hypot(s.x - b.x, s.y - b.y) < m.r + b.r)) { b.dead = true;
+      if (G.boss && bossShielded(b)) { tone('square', 700, 500, 0.1, 0.2); say('ЩИТ БОССА! Зайди сбоку', head.x, head.y - m.r - 36, '#ffd166', 1); for (let i = 0; i < 8; i++) G.particles.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, life: 0.3, col: '#ffd166' }); continue; }
+      if (b.ice) { m.frozen = 3; m.stun = Math.max(m.stun, 3); m.roarT = 0; const h = m.segs[0]; say('ЗАМЁРЗ! Ударь его!', h.x, h.y - 70, '#9ad6ff', 1.3); SFX.hit(); for (let i = 0; i < 16; i++) G.particles.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 260, vy: (Math.random() - 0.5) * 260, life: 0.6, col: '#bfe9ff' }); } } if (b.x < 0 || b.x > W || b.y < 40 || b.y > H || G.obstacles.some(o => (o.kind === 'wall' || o.kind === 'rock' || o.kind === 'fence' || o.kind === 'maze') && circleRect(b, o))) b.dead = true; }
   G.bullets = G.bullets.filter(b => !b.dead);
+  if (m.frozen > 0 && dist(r, head) < r.r + m.r + 6 && !peace) { // замороженного бьём телом — лёд разлетается, монстр теряет здоровье
+    hurt(1.0); m.frozen = 0; say('ХРЯСЬ!', head.x, head.y - m.r - 60, '#e6f6ff', 0.8); for (let i = 0; i < 18; i++) G.particles.push({ x: head.x, y: head.y, vx: (Math.random() - 0.5) * 320, vy: (Math.random() - 0.5) * 320, life: 0.6, col: '#bfe9ff' });
+    const d = dist(r, head) || 1; head.x += (head.x - r.x) / d * 50; head.y += (head.y - r.y) / d * 50; pushOut(head);
+  }
   if (m.hp <= 0 && !G.result) { G.result = 'win'; SFX.win(); return; }
   // монстр кусает: чуть задел — 5 энергии, наполовину — 50, залетел целиком — 100 (съел)
   const dd = dist(r, head), overlap = (r.r + m.r - dd) / (r.r + m.r);
@@ -942,6 +951,7 @@ function loseLife() { // возвращает false, если игра прои�
   if (r.lives <= 0) { G.result = 'lose'; SFX.lose(); return false; }
   r.hp = 100; r.inv = 2; G.monster.stun = 1.5; say(`Минус жизнь! Осталось ${r.lives} ❤`, W / 2, H / 2, '#ff6b6b', 1.5); return true;
 }
+function bossShielded(b) { const m = G.monster, h = m.segs[0]; if (m.face === undefined || m.stun > 0) return false; const a = Math.atan2(b.y - h.y, b.x - h.x); let d = a - m.face; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) < 1.25; } // щит закрывает ~140° спереди
 function hurt(stun) {
   const m = G.monster; m.hp = Math.max(0, m.hp - m.dmg); m.stun = stun; m.roarT = 0.8; SFX.hit(); SFX.roar(); shake = 0.35;
   const h = m.segs[0]; say(`-${m.dmg}`, h.x, h.y - 50, '#ff5252', 1); say('РРРР!', h.x + 40, h.y - 20, '#ffb347', 0.8);
@@ -1054,6 +1064,7 @@ function drawGame() {
     if (G.charged) { ctx.fillStyle = '#7CFC9A'; ctx.beginPath(); ctx.arc(r.x + 28, r.y - 30, 8, 0, 7); ctx.fill(); text('!', r.x + 28, r.y - 25, 14, '#063'); }
     ctx.fillStyle = '#0006'; ctx.beginPath(); rr(r.x - 24, r.y - 58, 48, 7, 3); ctx.fill(); ctx.fillStyle = r.hp > 50 ? '#7CFC9A' : r.hp > 20 ? '#ffd166' : '#ff5252'; ctx.beginPath(); rr(r.x - 24, r.y - 58, Math.max(3, 48 * r.hp / 100), 7, 3); ctx.fill();
   };
+  const drawBossShield = () => { if (m.face === undefined || m.stun > 0) return; ctx.save(); ctx.translate(head.x, head.y); ctx.rotate(m.face); ctx.fillStyle = 'rgba(80,180,255,0.3)'; ctx.strokeStyle = '#7fd8ff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.closePath(); ctx.fill(); ctx.restore(); };
   const drawMonster = () => {
     if (!G.boss) return drawCaterpillar(m, G.who === 'cat' ? 'boy' : 'cat');
     const sc = G.boyScale * 1.35, ang = Math.atan2(r.y - head.y, r.x - head.x), flip = r.x < head.x;
@@ -1064,7 +1075,9 @@ function drawGame() {
       ctx.fillStyle = '#2a2a2e'; ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
       if (G.flash > 0) { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.moveTo(42, -2); ctx.lineTo(60, -9); ctx.lineTo(52, 0); ctx.lineTo(60, 8); ctx.closePath(); ctx.fill(); }
       ctx.restore();
-      text('БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
+      drawBossShield();
+      drawBossShield();
+    text('БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
       { const per = m.maxHp / 5; for (let i = 0; i < 5; i++) { const full = m.hp > i * per + per * 0.5, half = !full && m.hp > i * per; text(full ? '❤' : half ? '💔' : '♡', head.x - 48 + i * 24, head.y - m.r - 58, 20, full || half ? '#ff4d6d' : '#ffffff66'); } }
       return;
     }
@@ -1125,7 +1138,7 @@ function drawGame() {
     ctx.globalAlpha = clamp(4 - G.t, 0, 1);
     panel(W / 2 - 330, 60, 660, 118, 'rgba(20,24,48,0.9)');
     text('ЦЕЛЬ УРОВНЯ', W / 2, 90, 20, '#ffe08a');
-    text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом. Задание даёт 2 заряда: лёд замораживает его на 5 секунд, щит закрывает от очередей.' : 'БОСС! Кот с автоматом. Задание даёт 2 заряда: лёд замораживает его на 5 секунд, щит закрывает от очередей.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ЛЁД — замораживает гусеницу на 5 секунд (пробел), ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД — замораживает гусеницу на 5 секунд (пробел), ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
+    text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.' : 'БОСС! Кот с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
     text('Гусеница кусается и плюётся огнём (с 3-го мира — льдом). Ловушки бьют всех: шипы, кактусы, лава, лазеры, электрозаборы; болото замедляет и её.', W / 2, 145, 15, '#ff9f9f', 'center', false);
     text('Грязь пачкает: грязный может прыгнуть в воду, помыться 3 секунды и вылететь. Чистого вода не пускает.', W / 2, 168, 13, '#bbb', 'center', false);
     ctx.globalAlpha = 1;
