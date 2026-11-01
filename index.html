@@ -624,6 +624,7 @@ function energyBar(x, y, w, who, label) {
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
+const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
 const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 58, hx: 120, hy: 0 }; // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
 cv.addEventListener('pointerdown', e => {
@@ -700,7 +701,7 @@ function circleRect(c, o, pad = 0) { const cx = clamp(c.x, o.x - pad, o.x + o.w 
 const laserOn = o => ((G.t + o.phase) % 3) < 1.6;
 function pushOut(c) { for (const o of G.obstacles) { if (o.kind === 'mud' || o.kind === 'thorns' || o.kind === 'spikes' || o.kind === 'laser' || (o.kind === 'pool' && c === G.runner && (c.dirty || c.swim > 0)) || !circleRect(c, o)) continue; const cx = clamp(c.x, o.x, o.x + o.w), cy = clamp(c.y, o.y, o.y + o.h); let dx = c.x - cx, dy = c.y - cy, d = Math.hypot(dx, dy); if (d < 0.01) { dx = 1; dy = 0; d = 1; } c.x = cx + dx / d * c.r; c.y = cy + dy / d * c.r; } c.x = clamp(c.x, c.r, W - c.r); c.y = clamp(c.y, 50 + c.r, H - c.r); }
 
-const TASKS = ['collect', 'rings', 'maze', 'mouse', 'simon', 'buttons', 'key', 'color'];
+const TASKS = ['collect', 'rings', 'mouse', 'buttons']; // лабиринт/плитки/ключ/шарики Демид убрал 01.11, код оставлен
 const SIMON_COLS = ['#e63946', '#2ecc71', '#3b82f6', '#ffd700'], BALL_COLS = ['#e63946', '#2ecc71', '#3b82f6'], BALL_NAMES = ['красных', 'зелёных', 'синих'];
 function buildMaze(R) { // лабиринт 5×5 из кирпичных стенок; вход слева снизу, флажок в самой дальней клетке
   const n = 5, c = 66, t = 8, size = n * c + t, ox = Math.round(260 + R() * Math.max(10, W - 260 - 230 - size)), oy = Math.round(70 + R() * Math.max(10, H - 70 - 60 - size));
@@ -749,8 +750,8 @@ function action() { // пробел / кнопка: выстрел или щит
   if ((G.treat && G.treat.shown && !G.treat.got && !G.treat.eaten) || G.truce > 0) { if (G.raceCd <= 0) dash(); return; } // в гонке и перемирии — только бег
   if (G.charged) {
     const m = G.monster.segs[0], r = G.runner, d = Math.max(1, dist(r, m));
-    G.bullets.push({ x: r.x, y: r.y, vx: (m.x - r.x) / d * 540, vy: (m.y - r.y) / d * 540, r: 9, ice: G.who === 'boy' });
-    spendCharge(); SFX.shot(); if (G.who === 'cat') { SFX.meow(); say('МЯУ!', r.x, r.y - 60, '#fff', 0.8); } else say('ЛЁД!', r.x, r.y - 60, '#9ad6ff', 0.8);
+    G.bullets.push({ x: r.x, y: r.y, vx: (m.x - r.x) / d * 540, vy: (m.y - r.y) / d * 540, r: 9, ice: true }); // оба стреляют льдом
+    spendCharge(); SFX.shot(); if (G.who === 'cat') SFX.meow(); say('ЛЁД!', r.x, r.y - 60, '#9ad6ff', 0.8);
   }
   else dash(); // пробел без заряда — рывок
 }
@@ -807,7 +808,7 @@ function update(dt) {
     if (G.boss && !race && dist(r, head) < 200) { tgt = { x: head.x + (head.x - r.x), y: head.y + (head.y - r.y) }; } // босс не лезет вплотную, стреляет издали
     if (!race) { let nc = null, nd = 170; for (const c of G.coins) if (!c.got) { const dc = dist(c, head); if (dc < nd) { nd = dc; nc = c; } } if (nc && dist(r, head) > 160) tgt = nc; }
     let ax = tgt.x - head.x, ay = tgt.y - head.y; const d = Math.hypot(ax, ay) || 1; ax /= d; ay /= d;
-    const spd = m.speed * (G.truce > 0 ? 0.45 : 1) * (G.obstacles.some(o => o.kind === 'mud' && circleRect(head, o)) ? 0.55 : 1);
+    const spd = m.speed * (G.truce > 0 ? 0.45 : 1) * (G.obstacles.some(o => o.kind === 'mud' && circleRect({ x: head.x, y: head.y, r: m.r }, o)) ? 0.55 : 1);
     const nx = head.x + ax * spd * dt, ny = head.y + ay * spd * dt, test = { x: nx, y: ny, r: m.r + 2 };
     const block = G.obstacles.find(o => o.kind !== 'mud' && o.kind !== 'thorns' && o.kind !== 'spikes' && o.kind !== 'laser' && circleRect(test, o));
     m.sideT = Math.max(0, (m.sideT || 0) - dt);
@@ -821,6 +822,9 @@ function update(dt) {
     pushOut(head);
     m.mouth = 0.75;
   }
+  m.trapT = Math.max(0, (m.trapT || 0) - dt);
+  if (m.trapT <= 0 && !G.boss) { const hc = { x: head.x, y: head.y, r: m.r }, sp = G.obstacles.find(o => o.kind === 'spikes' && circleRect(hc, o, -6)), lv = G.obstacles.find(o => o.kind === 'lava' && circleRect(hc, o, 2));
+    if (sp || lv) { const dmg = Math.max(5, Math.round(m.maxHp * (lv ? 0.08 : 0.03))); m.hp = Math.max(0, m.hp - dmg); m.trapT = 0.8; say(`-${dmg} ${lv ? 'лава!' : 'шипы!'}`, head.x, head.y - m.r - 36, lv ? '#ff6b35' : '#dde', 0.9); SFX.hit(); for (let i = 0; i < 6; i++) G.particles.push({ x: head.x, y: head.y, vx: (Math.random() - 0.5) * 200, vy: -Math.random() * 150, life: 0.4, col: lv ? '#ff6b35' : '#ff5252' }); } }
   for (let i = 1; i < m.segs.length; i++) { const a = m.segs[i - 1], b = m.segs[i], gap = m.r * 0.72, d = dist(a, b); if (d > gap) { b.x += (a.x - b.x) * (d - gap) / d; b.y += (a.y - b.y) * (d - gap) / d; } }
   // (сегменты идут внахлёст — тело выглядит сплошным)
   // кот орёт
@@ -905,7 +909,7 @@ function update(dt) {
     else if (T.type === 'key') { const [k, ch] = T.items; if (!k.got && dist(k, r) < r.r + k.r) { k.got = true; T.done++; SFX.coin(); say('Ключ! Теперь к сундуку', k.x, k.y - 30, '#ffd700', 1); } else if (k.got && !ch.got && dist(ch, r) < r.r + ch.r) { ch.got = true; T.done++; SFX.task(); S.coins += 3; G.earned += 3; say('+3 монеты из сундука!', ch.x, ch.y - 36, '#ffd700', 1.2); } }
     else if (T.type === 'color') { for (const it of T.items) if (!it.got && dist(it, r) < r.r + it.r) { it.got = true; if (it.col === T.col) { T.done++; SFX.task(); } else { r.hp = Math.max(0, r.hp - 5); SFX.hit(); say('Не тот цвет! -5 ⚡', it.x, it.y - 24, '#ff7043', 0.9); if (r.hp <= 0) { if (!loseLife()) return; } } } }
     else if (T.type === 'buttons') { for (const it of T.items) if (!it.got) { if (dist(it, r) < it.r + 6) { it.hold += dt; if (it.hold >= 0.6) { it.got = true; T.done++; SFX.task(); } } else it.hold = Math.max(0, it.hold - dt * 2); } }
-    if (T.done >= T.need) { G.task = null; G.charges = 2; G.charged = true; SFX.charged(); say(G.who === 'cat' ? '2 заряда! ОГОНЬ или ЩИТ' : '2 заряда! ЛЁД или ЩИТ', W / 2, 100, '#7CFC9A', 1.8); }
+    if (T.done >= T.need) { G.task = null; G.charges = 2; G.charged = true; SFX.charged(); say(TOUCH ? '2 заряда! ЛЁД или ЩИТ' : '2 заряда! Пробел — лёд, Shift — щит', W / 2, 100, '#7CFC9A', 1.8); }
   }
   shake = Math.max(0, shake - dt);
 }
@@ -1085,11 +1089,13 @@ function drawGame() {
   for (let i = 0; i < 3; i++) text(i < G.runner.lives ? '❤' : '♡', W - 390 + i * 20, 32, 17, i < G.runner.lives ? '#ff4d6d' : '#ffffff66');
   ctx.fillStyle = '#0008'; ctx.beginPath(); rr(W - 280, 14, 120, 20, 10); ctx.fill(); ctx.fillStyle = G.runner.hp > 50 ? '#7CFC9A' : G.runner.hp > 20 ? '#ffd166' : '#ff5252'; ctx.beginPath(); rr(W - 300, 14, Math.max(6, 120 * G.runner.hp / 100), 20, 10); ctx.fill(); text(`⚡ ${G.runner.hp}/100`, W - 220, 29, 13, '#1b2238');
   // кнопка действия
-  if (G.charged) {
-    btn(W - 120, H - 90, 104, 70, (G.who === 'cat' ? 'ОГОНЬ' : 'ЛЁД') + ' ×' + G.charges, action, G.who === 'cat' ? '#e74c3c' : '#3b82f6'); buttons[buttons.length - 1].instant = true;
+  if (!TOUCH) { if (G.charged) text(`Пробел — ЛЁД ×${G.charges}   Shift — ЩИТ`, W - 20, H - 16, 15, '#fff', 'right'); }
+  else if (G.charged) {
+    btn(W - 120, H - 90, 104, 70, 'ЛЁД ×' + G.charges, action, '#3b82f6'); buttons[buttons.length - 1].instant = true;
     btn(W - 232, H - 90, 104, 70, 'ЩИТ ×' + G.charges, shieldAction, '#2ecc71'); buttons[buttons.length - 1].instant = true;
   } else { btn(W - 120, H - 90, 104, 70, 'задание…', action, '#555'); buttons[buttons.length - 1].instant = true; }
-  if (joy.id !== null) { // джойстик под пальцем
+  if (!TOUCH) { }
+  else if (joy.id !== null) { // джойстик под пальцем
     const d = Math.min(joy.R, Math.hypot(joy.x - joy.bx, joy.y - joy.by)), a = Math.atan2(joy.y - joy.by, joy.x - joy.bx);
     ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.bx, joy.by, joy.R, 0, 7); ctx.fill(); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(joy.bx + Math.cos(a) * d, joy.by + Math.sin(a) * d, 28, 0, 7); ctx.fill();
@@ -1100,7 +1106,7 @@ function drawGame() {
     ctx.globalAlpha = clamp(4 - G.t, 0, 1);
     panel(W / 2 - 330, 60, 660, 118, 'rgba(20,24,48,0.9)');
     text('ЦЕЛЬ УРОВНЯ', W / 2, 90, 20, '#ffe08a');
-    text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом. Задание даёт 2 заряда: стреляй из пистолета или ставь щит от очередей.' : 'БОСС! Кот с автоматом. Задание даёт 2 заряда: лёд замораживает его на 5 секунд, щит закрывает от очередей.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ОГОНЬ — выстрел из пистолета (пробел), ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД — замораживает гусеницу на 5 секунд (пробел), ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
+    text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом. Задание даёт 2 заряда: лёд замораживает его на 5 секунд, щит закрывает от очередей.' : 'БОСС! Кот с автоматом. Задание даёт 2 заряда: лёд замораживает его на 5 секунд, щит закрывает от очередей.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ЛЁД — замораживает гусеницу на 5 секунд (пробел), ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД — замораживает гусеницу на 5 секунд (пробел), ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
     text('Гусеница кусается и плюётся (с 3-го мира — льдом). Шипы и колючки колют, лава жжёт, лазеры мигают — беги, когда погасли.', W / 2, 145, 15, '#ff9f9f', 'center', false);
     text('Грязь пачкает: грязный может прыгнуть в воду, помыться 3 секунды и вылететь. Чистого вода не пускает.', W / 2, 168, 13, '#bbb', 'center', false);
     ctx.globalAlpha = 1;
