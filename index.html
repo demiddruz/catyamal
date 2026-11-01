@@ -9,9 +9,9 @@
 <link rel="manifest" href="manifest.json">
 <title>Кот против Мальчика</title>
 <style>
-  html,body{margin:0;height:100%;background:#1b2238;overflow:hidden;touch-action:none;font-family:"Segoe UI",Arial,sans-serif;}
+  html,body{margin:0;height:100%;background:#5fa84f;overflow:hidden;touch-action:none;font-family:"Segoe UI",Arial,sans-serif;}
   #c{position:fixed;left:0;top:0;background:transparent;transform-origin:0 0;}
-  body{background:#0f1424;}
+  body{background:#5fa84f;}
 </style>
 </head>
 <body>
@@ -34,8 +34,8 @@ function fit() {
 }
 addEventListener('resize', fit); fit();
 
-const LEVELS_PER_WORLD = 20; // пока по 20 уровней в мире, потом добавим
-const WORLDS = [
+const LEVELS_PER_WORLD = 25; // Леон 01.11: 76 миров по 25 уровней
+const BASE_WORLDS = [
   { name: 'Двор',        ground: '#86c86a', line: '#6fb256', wall: '#8b5a2b', pool: '#4fb6e8' },
   { name: 'Пляж',        ground: '#f0dc9c', line: '#e6cf8a', wall: '#d9a066', pool: '#3aa0d8' },
   { name: 'Кухня',       ground: '#e9d9b8', line: '#d9c6a0', wall: '#9a6b3c', pool: '#7cc9f0' },
@@ -47,6 +47,10 @@ const WORLDS = [
   { name: 'Космос',      ground: '#1d1f3f', line: '#232650', wall: '#6b6fa8', pool: '#5e3ec9' },
   { name: 'Замок',       ground: '#9c8a74', line: '#8f7d68', wall: '#5a4a3a', pool: '#4fb6e8' },
 ];
+const WORLD_COUNT = 76, TIER_NAMES = ['лёгкий', 'средний', 'сложный'];
+const tierOf = w => w < 25 ? 0 : w < 50 ? 1 : 2;
+function tint(hex, k) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255; const f = c => Math.max(0, Math.min(255, Math.round(k > 0 ? c + (255 - c) * k : c * (1 + k)))); return '#' + [f(r), f(g), f(b)].map(c => c.toString(16).padStart(2, '0')).join(''); }
+const WORLDS = []; for (let i = 0; i < WORLD_COUNT; i++) { const b = BASE_WORLDS[i % BASE_WORLDS.length], round = Math.floor(i / BASE_WORLDS.length), k = [0, -0.12, 0.12, -0.24, 0.2, -0.3, 0.3, -0.18][round % 8]; WORLDS.push({ name: round ? `${b.name} ${round + 1}` : b.name, base: i % BASE_WORLDS.length, ground: tint(b.ground, k), line: tint(b.line, k), wall: tint(b.wall, k * 0.5), pool: b.pool }); }
 const ENDS = WORLDS.map((_, i) => (i + 1) * LEVELS_PER_WORLD);
 const TOTAL = ENDS[ENDS.length - 1];
 const worldOf = l => { for (let i = 0; i < ENDS.length; i++) if (l <= ENDS[i]) return i; return ENDS.length - 1; };
@@ -58,8 +62,8 @@ function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let
 
 // ───────────────────────── сохранение ─────────────────────────
 const FOOD = {
-  cat: { fish: { n: 'Рыбка', e: 50, p: 10, c: '#6fb7e0' }, sausage: { n: 'Сосиска', e: 100, p: 20, c: '#d97a5a' }, milk: { n: 'Молоко', e: 30, p: 6, c: '#f4f4f4' }, shrimp: { n: 'Креветка', e: 150, p: 30, c: '#f49a7a' } },
-  boy: { pizza: { n: 'Пицца', e: 100, p: 20, c: '#f2b84b' }, banana: { n: 'Банан', e: 50, p: 10, c: '#f7e15a' }, icecream: { n: 'Мороженое', e: 80, p: 15, c: '#f6c6dd' }, sandwich: { n: 'Бутерброд', e: 120, p: 25, c: '#e3b06a' } },
+  cat: { fish: { n: 'Рыбка', e: 50, p: 10, c: '#6fb7e0' }, sausage: { n: 'Сосиска', e: 100, p: 20, c: '#d97a5a' }, milk: { n: 'Молоко', e: 30, p: 6, c: '#f4f4f4' }, shrimp: { n: 'Креветка', e: 150, p: 30, c: '#f49a7a' }, chicken: { n: 'Курочка', e: 120, p: 24, c: '#e8b37a' }, cream: { n: 'Сметана', e: 40, p: 8, c: '#fff8e6' } },
+  boy: { pizza: { n: 'Пицца', e: 100, p: 20, c: '#f2b84b' }, banana: { n: 'Банан', e: 50, p: 10, c: '#f7e15a' }, icecream: { n: 'Мороженое', e: 80, p: 15, c: '#f6c6dd' }, sandwich: { n: 'Бутерброд', e: 120, p: 25, c: '#e3b06a' }, apple: { n: 'Яблоко', e: 40, p: 8, c: '#e74c3c' }, pear: { n: 'Груша', e: 45, p: 9, c: '#b7d86b' }, melon: { n: 'Арбуз', e: 90, p: 18, c: '#2ecc71' }, berry: { n: 'Клубника', e: 60, p: 12, c: '#ff4d6d' }, orange: { n: 'Апельсин', e: 50, p: 10, c: '#ff9f1c' } },
 };
 const MAX_ENERGY = 500, LEVEL_COST = 100;
 const DEF = { level: 1, best: 1, coins: 0, energy: { cat: 300, boy: 300 }, food: {}, lastTick: Date.now(),
@@ -389,7 +393,7 @@ function drawBoy(x, y, s, o = {}) {
   const LK = LOOKS[o.look === undefined ? (S.look || 0) : o.look];
   const f = o.outfit || S.outfit, back = !!o.back, mouth = o.mouth || 0, legT = o.legT || 0, SKIN = LK.skin;
   if (!o.headOnly) { ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(x, y + 46 * s, 20 * s, 5 * s, 0, 0, 7); ctx.fill(); }
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.save(); ctx.translate(x, y); ctx.scale(o.flip ? -s : s, s);
   const shortsCol = ['#004d98', '#f4f4f4', '#1c1c22'][f.shorts];
   // ноги — прямые, шаг как на параде
   for (const side of [-1, 1]) {
@@ -629,7 +633,7 @@ function energyBar(x, y, w, who, label) {
 
 // ───────────────────────── ввод ─────────────────────────
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
 const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0; // телефон/планшет — экранные кнопки, компьютер — клавиатура
 const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 78, get hx() { return W - 135; }, hy: 0 }; // крупный джойстик в правом нижнем углу // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
@@ -637,6 +641,7 @@ function toCanvas(e) { if (ROT) return { x: e.clientY * W / innerHeight, y: (inn
 cv.addEventListener('pointerdown', e => {
   ac(); const p = toCanvas(e);
   if (TOUCH && !window.__lockTried) { window.__lockTried = true; try { const so = window.screen.orientation; if (so && so.lock) so.lock('landscape').catch(() => {}); } catch (_) {} }
+  if (screen === 'football' && !hitBtn(p.x, p.y)) { if (F && !F.youShoot && (F.phase === 'wait' || F.phase === 'fly') && joy.id === null && TOUCH) { joy.id = e.pointerId; joy.bx = joy.x = p.x; joy.by = joy.y = p.y; joy.t0 = performance.now(); F.keeperTgt = clamp(p.x, GOAL().x1 + 20, GOAL().x2 - 20); return; } footballTap(p); return; }
   if (screen === 'game' && G && !G.result && !hitBtn(p.x, p.y) && joy.id === null) { joy.id = e.pointerId; joy.hy = H - 120; const fixed = Math.hypot(p.x - joy.hx, p.y - joy.hy) < 120; joy.bx = fixed ? joy.hx : p.x; joy.by = fixed ? joy.hy : p.y; joy.x = p.x; joy.y = p.y; joy.t0 = performance.now(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; } // палец на поле — джойстик
   pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.id = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (_) {}
   pointer.sy = p.y; pointer.moved = 0; pointer.t0 = performance.now();
@@ -658,6 +663,70 @@ cv.addEventListener('click', e => { if (performance.now() - lastFire < 400) retu
 cv.addEventListener('wheel', e => { if (screen === 'map') { mapScroll += e.deltaY; e.preventDefault(); } }, { passive: false });
 cv.addEventListener('pointercancel', e => { if (e.pointerId === joy.id) { joy.id = null; return; } pointer.down = false; pointer.id = null; pointer.btn = null; });
 
+// ───────────────────────── футбол: пенальти Леон против Ника ─────────────────────────
+const BALLS = ['Классика', 'Барса', 'Огонь', 'Лёд', 'Золото', 'Арбуз', 'Пляж', 'Космос', 'Неон', 'Триколор'];
+function drawBall(x, y, r, k, rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(2, r * 0.9, r * 0.9, r * 0.35, 0, 0, 7); ctx.fill();
+  const base = ['#fff', '#1d3f8f', '#ff6a1f', '#bfe9ff', '#ffd700', '#2ecc71', '#fff', '#1a1040', '#0b0b12', '#fff'][k];
+  ctx.fillStyle = base; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
+  if (k === 0) { ctx.fillStyle = '#111'; for (let i = 0; i < 5; i++) { const a = i * 1.2566 + 0.3; ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.3, 0, 7); ctx.fill(); } ctx.beginPath(); ctx.arc(0, 0, r * 0.28, 0, 7); ctx.fill(); }
+  if (k === 1) { ctx.fillStyle = '#a3193a'; for (let i = -2; i <= 2; i++) ctx.fillRect(i * r * 0.5 - r * 0.12, -r, r * 0.25, r * 2); ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(0, 0, r * 0.22, 0, 7); ctx.fill(); }
+  if (k === 2) { ctx.fillStyle = '#ffd34d'; for (let i = 0; i < 6; i++) { const a = i * 1.047; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(Math.cos(a) * r, Math.sin(a) * r * 0.3, Math.cos(a + 0.5) * r * 1.1, Math.sin(a + 0.5) * r * 1.1); ctx.quadraticCurveTo(Math.cos(a + 0.3) * r * 0.5, Math.sin(a + 0.3) * r * 0.5, 0, 0); ctx.fill(); } ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(0, 0, r * 0.25, 0, 7); ctx.fill(); }
+  if (k === 3) { ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.12; for (let i = 0; i < 3; i++) { const a = i * 1.047; ctx.beginPath(); ctx.moveTo(-Math.cos(a) * r, -Math.sin(a) * r); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); } ctx.fillStyle = '#ffffffaa'; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.22, 0, 7); ctx.fill(); }
+  if (k === 4) { ctx.fillStyle = '#b8860b'; for (let i = 0; i < 5; i++) { const a = i * 1.2566 + 0.3; ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.28, 0, 7); ctx.fill(); } ctx.fillStyle = '#fff6b0'; ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.35, r * 0.2, 0, 7); ctx.fill(); }
+  if (k === 5) { ctx.strokeStyle = '#1e8c46'; ctx.lineWidth = r * 0.14; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.4, -r); ctx.quadraticCurveTo(i * r * 0.6, 0, i * r * 0.4, r); ctx.stroke(); } }
+  if (k === 6) { const cols = ['#e63946', '#ffd700', '#3b82f6', '#2ecc71', '#ff9f1c', '#fff']; for (let i = 0; i < 6; i++) { ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, i * 1.047, (i + 1) * 1.047); ctx.closePath(); ctx.fill(); } }
+  if (k === 7) { ctx.fillStyle = '#fff'; for (let i = 0; i < 14; i++) { ctx.beginPath(); ctx.arc(Math.cos(i * 2.4) * r * (0.2 + (i % 5) * 0.15), Math.sin(i * 2.4) * r * (0.2 + (i % 4) * 0.18), 1.2 + (i % 3) * 0.6, 0, 7); ctx.fill(); } ctx.fillStyle = '#8e44ad88'; ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.35, 0.6, 0, 7); ctx.fill(); }
+  if (k === 8) { ctx.strokeStyle = '#39ff14'; ctx.lineWidth = r * 0.1; ctx.beginPath(); ctx.arc(0, 0, r * 0.65, 0, 7); ctx.stroke(); for (let i = 0; i < 6; i++) { const a = i * 1.047; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.65, Math.sin(a) * r * 0.65); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); } }
+  if (k === 9) { ctx.fillStyle = '#0039a6'; ctx.fillRect(-r, -r / 3, 2 * r, 2 * r / 3); ctx.fillStyle = '#d52b1e'; ctx.fillRect(-r, r / 3, 2 * r, r); }
+  ctx.restore(); ctx.strokeStyle = '#0005'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffffff66'; ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.4, r * 0.18, 0, 7); ctx.fill();
+  ctx.restore();
+}
+let F = null;
+const GOAL = () => ({ x1: W / 2 - 130, x2: W / 2 + 130, y: 118, top: 58 });
+function startFootball() { F = { round: 1, you: 0, them: 0, youShoot: true, phase: 'aim', t: 0, aim: 0, aimDir: 1, ball: { x: W / 2, y: H - 170, vx: 0, vy: 0, rot: 0 }, keeperX: W / 2, keeperTgt: W / 2, dive: 0, msg: '', spin: 0 }; screen = 'football'; }
+function footballTap(p) { // тап: в фазе прицела — удар; когда ты вратарь — прыжок к месту тапа
+  if (!F) return; if (F.phase === 'aim' && F.youShoot) footballKick(); else if (F.phase === 'wait' && !F.youShoot && p) F.keeperTgt = clamp(p.x, GOAL().x1 + 20, GOAL().x2 - 20); else if (F.phase === 'over') startFootball();
+}
+function footballKick() { const g = GOAL(), tx = F.youShoot ? g.x1 - 25 + (F.aim + 1) / 2 * (g.x2 - g.x1 + 50) : g.x1 + 25 + Math.random() * (g.x2 - g.x1 - 50); const b = F.ball, dx = tx - b.x, dy = g.y - b.y, d = Math.hypot(dx, dy); b.vx = dx / d * 620; b.vy = dy / d * 620; F.phase = 'fly'; F.t = 0; tone('square', 300, 120, 0.1, 0.3); noise(0.08, 0.3, 2500);
+  if (F.youShoot) { const guess = Math.random() < 0.55 ? tx : g.x1 + 30 + Math.random() * (g.x2 - g.x1 - 60); F.keeperTgt = guess; } }
+function footballResult(goal) { F.phase = 'result'; F.t = 0; if (goal) { if (F.youShoot) F.you++; else F.them++; SFX.win(); F.msg = F.youShoot ? 'ГОЛ! 🎉' : 'Гол пропущен…'; } else { SFX.task(); F.msg = F.youShoot ? 'Вратарь взял!' : 'СЕЙВ! 🧤'; } }
+function updateFootball(dt) {
+  const g = GOAL(), b = F.ball; F.t += dt;
+  if (F.phase === 'aim') { if (F.youShoot) { F.aim += F.aimDir * dt * 1.6; if (F.aim > 1) { F.aim = 1; F.aimDir = -1; } if (F.aim < -1) { F.aim = -1; F.aimDir = 1; } } else { F.phase = 'wait'; F.t = 0; } }
+  else if (F.phase === 'wait') { if (!F.youShoot) { if (keys.ArrowLeft || keys.KeyA) F.keeperTgt -= 380 * dt; if (keys.ArrowRight || keys.KeyD) F.keeperTgt += 380 * dt; if (joy.id !== null) F.keeperTgt += (joy.x - joy.bx) / joy.R * 380 * dt; F.keeperTgt = clamp(F.keeperTgt, g.x1 + 20, g.x2 - 20); if (F.t > 1.6) footballKick(); } }
+  else if (F.phase === 'fly') { b.x += b.vx * dt; b.y += b.vy * dt; b.rot += dt * 12; if (!F.youShoot) { if (keys.ArrowLeft || keys.KeyA) F.keeperTgt -= 380 * dt; if (keys.ArrowRight || keys.KeyD) F.keeperTgt += 380 * dt; if (joy.id !== null) F.keeperTgt += (joy.x - joy.bx) / joy.R * 380 * dt; F.keeperTgt = clamp(F.keeperTgt, g.x1 + 20, g.x2 - 20); }
+    if (b.y <= g.y) { const inGoal = b.x > g.x1 + 8 && b.x < g.x2 - 8, saved = Math.abs(b.x - F.keeperX) < 44; if (!inGoal) { F.msg = F.youShoot ? 'Мимо ворот!' : 'Мимо — повезло'; F.phase = 'result'; F.t = 0; SFX.hit(); } else footballResult(!saved); if (!inGoal || saved) { b.vx = (Math.random() - 0.5) * 200; b.vy = 160; } else { b.vy = 120; b.vx *= 0.2; } } }
+  else if (F.phase === 'result') { b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.96; b.vy *= 0.96; if (F.t > 1.6) { if (!F.youShoot) F.round++; F.youShoot = !F.youShoot; if (F.round > 5) { F.phase = 'over'; F.msg = F.you > F.them ? 'ПОБЕДА! 🏆' : F.you < F.them ? 'Проиграли… ещё раз?' : 'Ничья!'; } else { F.phase = 'aim'; F.t = 0; b.x = W / 2; b.y = H - 170; b.vx = b.vy = 0; F.keeperTgt = W / 2; F.aim = -1; F.aimDir = 1; } } }
+  F.keeperX += clamp(F.keeperTgt - F.keeperX, -(F.phase === 'fly' || F.phase === 'wait' ? 520 : 300) * dt, (F.phase === 'fly' || F.phase === 'wait' ? 520 : 300) * dt);
+}
+function drawCatKit(x, y, sc, legT, flip) { // Ник в форме Барсы: сзади NICK и 17
+  ctx.save(); ctx.translate(x, y); ctx.rotate(flip ? Math.PI / 2 : -Math.PI / 2); ctx.translate(-x, -y); drawCat(x, y, sc, { legT, flip, mood: 'happy' }); ctx.translate(x, y); ctx.scale(flip ? -sc : sc, sc);
+  ctx.fillStyle = '#1d3f8f'; ctx.beginPath(); rr(-26, -22, 34, 26, 7); ctx.fill(); ctx.fillStyle = '#a3193a'; ctx.fillRect(-20, -22, 7, 26); ctx.fillRect(-6, -22, 7, 26); ctx.fillStyle = '#ffd700'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.fillText('NICK', -9, -12); ctx.font = 'bold 12px Arial'; ctx.fillText('17', -9, 1); ctx.restore();
+}
+function drawFootball() {
+  const g = GOAL(), b = F.ball, t = performance.now() / 1000;
+  ctx.fillStyle = '#5fa84f'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#6fb85e'; for (let y = 0; y < H; y += 60) ctx.fillRect(0, y, W, 30);
+  ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 4; ctx.strokeRect(W / 2 - 300, g.y, 600, H - g.y - 60); ctx.strokeRect(W / 2 - 180, g.y, 360, 140); ctx.beginPath(); ctx.arc(W / 2, H - 170, 8, 0, 7); ctx.stroke();
+  // ворота с сеткой
+  ctx.fillStyle = '#ffffff33'; ctx.fillRect(g.x1, g.top, g.x2 - g.x1, g.y - g.top); ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1; for (let x = g.x1; x <= g.x2; x += 16) { ctx.beginPath(); ctx.moveTo(x, g.top); ctx.lineTo(x, g.y); ctx.stroke(); } for (let y = g.top; y <= g.y; y += 16) { ctx.beginPath(); ctx.moveTo(g.x1, y); ctx.lineTo(g.x2, y); ctx.stroke(); }
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(g.x1, g.y); ctx.lineTo(g.x1, g.top); ctx.lineTo(g.x2, g.top); ctx.lineTo(g.x2, g.y); ctx.stroke();
+  // вратарь и бьющий: когда ты бьёшь — Леон бьёт, Ник в воротах; потом наоборот
+  const keeperIsCat = F.youShoot, kx = F.keeperX, ky = g.y + 10, lean = clamp((F.keeperTgt - F.keeperX) / 60, -1, 1);
+  if (keeperIsCat) drawCatKit(kx, ky + 6, 1.1, t * 6, lean < 0); else drawBoy(kx, ky + 22, 1.25, { legT: t * 6, mouth: 0.2, blink: Math.floor(t * 2) % 7 === 0 });
+  if (F.phase !== 'over') { const sx = W / 2 + (F.phase === 'aim' || F.phase === 'wait' ? -40 : -70), sy = H - 150; if (F.youShoot) drawBoy(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? 6 : 0, mouth: 0.4, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatKit(sx, sy, 1.2, F.phase === 'fly' ? t * 10 : 0, false); }
+  drawBall(b.x, b.y, 15, S.ball || 0, b.rot);
+  if (F.phase === 'aim' && F.youShoot) { const ax = g.x1 - 25 + (F.aim + 1) / 2 * (g.x2 - g.x1 + 50); ctx.strokeStyle = '#ffe600'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ax, g.y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = ax > g.x1 + 8 && ax < g.x2 - 8 ? '#ffe600' : '#ff4d6d'; ctx.beginPath(); ctx.arc(ax, g.y, 10, 0, 7); ctx.fill(); }
+  // табло и подсказки
+  panel(W / 2 - 170, 6, 340, 42); text(`Леон ${F.you} : ${F.them} Ник   ·   удар ${Math.min(5, F.round)} из 5`, W / 2, 34, 20, '#ffe08a');
+  const hint = F.phase === 'over' ? F.msg + '  — тап: ещё раз' : F.phase === 'result' ? F.msg : F.youShoot ? (TOUCH ? 'Ты бьёшь: тап, когда метка там, куда хочешь' : 'Ты бьёшь: пробел, когда метка там, куда хочешь') : (TOUCH ? 'Ты в воротах: тапни, куда прыгнуть' : 'Ты в воротах: стрелки влево-вправо');
+  text(hint, W / 2, H - 28, 20, F.phase === 'result' || F.phase === 'over' ? '#fff' : '#ffe08a');
+  btn(W - 150, 56, 136, 34, 'Меню', () => { screen = 'menu'; F = null; }, '#555', true);
+  btn(14, 56, 170, 34, 'Мяч: ' + BALLS[S.ball || 0], () => { S.ball = ((S.ball || 0) + 1) % BALLS.length; save(); }, '#3b82f6', true);
+}
+
 // ───────────────────────── игра ─────────────────────────
 let screen = 'menu', G = null, msg = [], shake = 0, catEyesOpen = false;
 let menuCatHit = null;
@@ -673,24 +742,24 @@ function startLevel(level) {
   const hits = 3 + Math.floor(liw / 5), hp = 100 * liw; // выстрелов до победы: 3–7, то есть минимум два задания  // 100, 200, 300… уронов
   G = {
     level, world: w, liw, who, t: 0, result: null, resultT: 0, boyScale, hits,
-    runner: { x: 150, y: H / 2, r: 24, speed: who === 'cat' ? 215 : 225, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
-    boss: liw === LEVELS_PER_WORLD, // последний уровень мира: босс с автоматом и 5 сердцами (мальчик или кот — кто гонится)
-    monster: { r: 22 + Math.min(10, w * 2), speed: Math.min(150, 84 + level * 0.35 + w * 4), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
+    runner: { x: 150, y: H / 2, r: 27, speed: who === 'cat' ? 215 : 225, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
+    boss: liw >= LEVELS_PER_WORLD - 1, minigun: liw === LEVELS_PER_WORLD || w >= 2, // два последних уровня мира — боссы; последний (и все с 3-го мира) с миниганом
+    monster: { r: 34 + Math.min(8, (w % 10) * 2), speed: Math.round(Math.min(150, 84 + liw * 0.6 + (w % 10) * 3) * [1, 1.12, 1.25][tierOf(w)]), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
     obstacles: [], coins: [], bullets: [], mBullets: [], spitT: 5, task: null, charged: false, taskN: 0,
     shield: { on: 0, cd: 0 }, meowT: 2, particles: [], introT: 3.2, earned: 0, charges: 0,
   };
-  const nseg = 9 + w * 2; for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 14, y: H / 2 });
-  if (G.boss) { G.monster.hp = G.monster.maxHp = Math.round(hp * 1.5); G.monster.dmg = Math.ceil(G.monster.maxHp / 7); G.monster.speed = Math.min(170, G.monster.speed * 0.8); G.monster.r = 30; G.burstT = 3; G.burstLeft = 0; }
+  const nseg = Math.min(23, 11 + (w % 10) * 2 + tierOf(w) * 2); for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 14, y: H / 2 });
+  if (G.boss) { G.monster.hp = G.monster.maxHp = Math.round(hp * (G.minigun ? 2 : 1.5)); G.monster.dmg = Math.ceil(G.monster.maxHp / 7); G.monster.speed = Math.min(170, G.monster.speed * 0.8); G.monster.r = 30; G.burstT = 3; G.burstLeft = 0; }
   // препятствия
   const kinds = ['pool', 'rock', 'wall']; // обычные препятствия со 2-го уровня
   if (level >= 2) kinds.push('thorns'); if (level >= 3) kinds.push('spikes'); if (level >= 4) kinds.push('lava'); if (level >= 5) kinds.push('mud'); if (level >= 8) kinds.push('laser'); if (level >= 10) kinds.push('fence');
-  const n = level === 1 ? 0 : Math.min(22, 3 + w + Math.floor(level / 2) + Math.floor(R() * 4)); // первый уровень — чистое поле, дальше всё больше
+  const n = level === 1 ? 0 : Math.min(9, 2 + Math.floor(liw / 6) + tierOf(w) * 2 + Math.floor(R() * 2)); // первый уровень — чистое поле; дальше немного, с запасом места между ловушками
   for (let i = 0; i < n; i++) {
     for (let tries = 0; tries < 40; tries++) {
       const kind = kinds[Math.floor(R() * kinds.length)];
-      const o = kind === 'laser' ? (R() < 0.5 ? { x: 90 + R() * (W - 340), y: 70 + R() * (H - 200), w: 150 + R() * 130, h: 8, kind, phase: R() * 3 } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 300), w: 8, h: 110 + R() * 110, kind, phase: R() * 3 }) : kind === 'fence' ? { x: 90 + R() * (W - 300), y: 70 + R() * (H - 200), w: 120 + R() * 120, h: 14, kind } : kind === 'rock' ? { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 44 + R() * 30, h: 40 + R() * 24, kind } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 50 + R() * 110, h: 40 + R() * 90, kind };
+      const o = kind === 'laser' ? (R() < 0.5 ? { x: 90 + R() * (W - 340), y: 70 + R() * (H - 200), w: 110 + R() * 70, h: 8, kind, phase: R() * 3 } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 300), w: 8, h: 90 + R() * 60, kind, phase: R() * 3 }) : kind === 'fence' ? { x: 90 + R() * (W - 300), y: 70 + R() * (H - 200), w: 90 + R() * 60, h: 14, kind } : kind === 'rock' ? { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 44 + R() * 30, h: 40 + R() * 24, kind } : { x: 90 + R() * (W - 260), y: 70 + R() * (H - 220), w: 44 + R() * 56, h: 36 + R() * 48, kind };
       if (circleRect({ x: 150, y: H / 2, r: 110 }, o) || circleRect({ x: W - 150, y: H / 2, r: 140 }, o)) continue;
-      if (G.obstacles.some(q => o.x < q.x + q.w + 26 && o.x + o.w + 26 > q.x && o.y < q.y + q.h + 26 && o.y + o.h + 26 > q.y)) continue;
+      if (G.obstacles.some(q => o.x < q.x + q.w + 90 && o.x + o.w + 90 > q.x && o.y < q.y + q.h + 90 && o.y + o.h + 90 > q.y)) continue; // между ловушками широкий проход
       G.obstacles.push(o); break;
     }
   }
@@ -731,7 +800,7 @@ function buildMaze(R) { // лабиринт 5×5 из кирпичных сте�
 function newTask(R) {
   R = R || rng(G.level * 31 + G.taskN * 101); G.taskN++;
   const type = TASKS[(G.level + G.taskN) % TASKS.length], task = { type, items: [], done: 0, need: 3 };
-  if (type === 'mouse') { task.need = 1; const p = freeSpot(R, 14); task.items.push({ x: p.x, y: p.y, r: 14, vx: 0, vy: 0 }); }
+  if (type === 'mouse') { task.need = 1; const p = freeSpot(R, 20); task.items.push({ x: p.x, y: p.y, r: 20, vx: 0, vy: 0 }); }
   else if (type === 'maze') { task.need = 1; task.items.push(buildMaze(R)); }
   else if (type === 'simon') { // четыре цветные плитки, показываем порядок из трёх, потом повторить ногами
     const c = freeSpot(R, 90); const cx = clamp(c.x, 150, W - 150), cy = clamp(c.y, 150, H - 110);
@@ -828,7 +897,8 @@ function update(dt) {
     const hcm = { x: head.x, y: head.y, r: m.r }, inMudM = G.obstacles.some(o => o.kind === 'mud' && circleRect(hcm, o)), inPoolM = G.obstacles.find(o => o.kind === 'pool' && circleRect(hcm, o));
     if (inMudM && !m.dirty) { m.dirty = true; say('Гусеница в грязи!', head.x, head.y - m.r - 36, '#c89b5a', 0.9); }
     if (inPoolM && m.dirty) { m.wash = (m.wash || 0) + dt; if (m.wash >= 2) { m.dirty = false; m.wash = 0; say('Гусеница помылась', head.x, head.y - m.r - 36, '#9ad6ff', 0.9); } } else m.wash = 0;
-    const spd = m.speed * (m.dashOn > 0 ? 1.9 : 1) * (G.truce > 0 ? 0.45 : 1) * (inMudM ? 0.55 : m.dirty ? 0.75 : 1) * (inPoolM ? 0.6 : 1);
+    m.snake = Math.max(0, (m.snake || 0) - dt);
+    const spd = m.speed * (m.snake > 0 ? 2.6 : m.dashOn > 0 ? 1.9 : 1) * (G.truce > 0 ? 0.45 : 1) * (inMudM ? 0.55 : m.dirty ? 0.75 : 1) * (inPoolM ? 0.6 : 1);
     const nx = head.x + ax * spd * dt, ny = head.y + ay * spd * dt, test = { x: nx, y: ny, r: m.r + 2 };
     const block = G.obstacles.find(o => o.kind !== 'mud' && o.kind !== 'thorns' && o.kind !== 'spikes' && o.kind !== 'laser' && !(o.kind === 'pool' && (m.dirty || m.wash > 0)) && circleRect(test, o));
     m.sideT = Math.max(0, (m.sideT || 0) - dt);
@@ -857,15 +927,15 @@ function update(dt) {
   // босс стреляет очередями из автомата
   if (G.boss) {
     G.burstT -= dt;
-    if (G.burstT <= 0 && m.stun <= 0 && !peace) { G.burstLeft = 3; G.burstGap = 0; G.burstT = 2.6 + Math.random() * 1.2; }
-    if (G.burstLeft > 0) { G.burstGap -= dt; if (G.burstGap <= 0) { G.burstGap = 0.13; G.burstLeft--; const d = dist(r, head) || 1, sp = 0.08; const ang = Math.atan2(r.y - head.y, r.x - head.x) + (Math.random() - 0.5) * sp; G.mBullets.push({ x: head.x + Math.cos(ang) * 30, y: head.y - 10 + Math.sin(ang) * 30, vx: Math.cos(ang) * 420, vy: Math.sin(ang) * 420, r: 5, dmg: 15, gun: true }); G.flash = 0.06; tone('square', 900, 200, 0.08, 0.25); noise(0.06, 0.25, 4000); } }
+    if (G.burstT <= 0 && m.stun <= 0 && !peace) { G.burstLeft = G.minigun ? 8 : 3; G.burstGap = 0; G.burstT = (G.minigun ? 3.4 : 2.6) + Math.random() * 1.2; }
+    if (G.burstLeft > 0) { G.burstGap -= dt; if (G.burstGap <= 0) { G.burstGap = G.minigun ? 0.08 : 0.13; G.burstLeft--; const d = dist(r, head) || 1, sp = G.minigun ? 0.16 : 0.08; const ang = Math.atan2(r.y - head.y, r.x - head.x) + (Math.random() - 0.5) * sp; G.mBullets.push({ x: head.x + Math.cos(ang) * 30, y: head.y - 10 + Math.sin(ang) * 30, vx: Math.cos(ang) * 420, vy: Math.sin(ang) * 420, r: 5, dmg: 15, gun: true }); G.flash = 0.06; tone('square', 900, 200, 0.08, 0.25); noise(0.06, 0.25, 4000); } }
     G.flash = Math.max(0, (G.flash || 0) - dt);
   }
   // гусеница плюётся
   G.spitT -= dt;
   if (!G.boss && G.spitT <= 0 && m.stun <= 0 && !peace) {
     G.spitT = Math.max(3.2, 6.5 - G.level * 0.05); const d = dist(r, head) || 1;
-    if (d < 520) { G.mBullets.push({ x: head.x, y: head.y, vx: (r.x - head.x) / d * 260, vy: (r.y - head.y) / d * 260, r: 8, venom: true }); SFX.shot(); say('ЯД!', head.x, head.y - m.r - 30, '#8fd46b', 0.7); }
+    if (d < 340) { m.snake = 1.3; SFX.shot(); say('ШШШ! ЗМЕЯ!', head.x, head.y - m.r - 30, '#8fd46b', 0.9); } else G.spitT = 0.6; // змеиный бросок: быстро тянется к бегуну и кусает ядом
   }
   for (const b of G.mBullets) {
     b.x += b.vx * dt; b.y += b.vy * dt;
@@ -890,7 +960,7 @@ function update(dt) {
     const bite = overlap < 0.3 ? 5 : overlap < 0.65 ? 50 : 100;
     if (r.armor > 0) { r.armor = 0; r.inv = 1.6; m.stun = 1; say('Броня спасла!', r.x, r.y - 60, '#9ad6ff'); SFX.hit(); shake = 0.3; }
     else {
-      r.hp = Math.max(0, r.hp - bite); r.inv = 1.0; m.stun = 0.6; shake = 0.2 + bite / 300; SFX.hit();
+      r.hp = Math.max(0, r.hp - bite); r.inv = 1.0; m.stun = 0.6; shake = 0.2 + bite / 300; SFX.hit(); if (m.snake > 0) { r.poison = 2; m.snake = 0; say('ЯДОВИТЫЙ УКУС!', r.x, r.y - 80, '#8fd46b', 1); }
       say(`-${bite} ⚡`, r.x, r.y - 60, bite >= 100 ? '#ff3030' : bite >= 50 ? '#ff7043' : '#ffd166');
       const d = dd || 1; head.x += (head.x - r.x) / d * 40; head.y += (head.y - r.y) / d * 40; pushOut(head);
       if (r.hp <= 0) { if (!loseLife()) return; }
@@ -978,7 +1048,7 @@ function toEnd(res) {
 
 // ───────────────────────── отрисовка игры ─────────────────────────
 function drawArena(w) {
-  const Wd = WORLDS[w]; ctx.fillStyle = Wd.ground; ctx.fillRect(0, 0, W, H);
+  const Wd = WORLDS[w]; w = Wd.base; ctx.fillStyle = Wd.ground; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = Wd.line; for (let y = 50; y < H; y += 60) ctx.fillRect(0, y, W, 30);
   if (w === 1) { ctx.fillStyle = '#3aa0d8'; ctx.fillRect(0, H - 70, W, 70); ctx.fillStyle = '#ffffff99'; const t = performance.now() / 700; for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.ellipse(x + 40 + Math.sin(t + x) * 10, H - 70 + Math.sin(t * 1.3 + x) * 3, 40, 6, 0, 0, 7); ctx.fill(); } }
   if (w === 2) { ctx.strokeStyle = '#c9b68f'; ctx.lineWidth = 2; for (let x = 0; x < W; x += 60) for (let y = 50; y < H; y += 60) ctx.strokeRect(x, y, 60, 60); }
@@ -1026,8 +1096,10 @@ function drawItem(it, type) {
     ctx.strokeStyle = cur ? '#ffe600' : '#ffffff88'; ctx.lineWidth = cur ? 7 : 4; ctx.beginPath(); ctx.arc(it.x, it.y, it.r, 0, 7); ctx.stroke();
     text(String(idx + 1), it.x, it.y + 9, 24, cur ? '#ffe600' : '#ffffffaa');
   } else if (type === 'mouse') {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.scale(1.45, 1.45); ctx.translate(-it.x, -it.y);
     if (G.who === 'cat') { ctx.fillStyle = '#9a9a9a'; ctx.beginPath(); ctx.ellipse(it.x, it.y, 14, 9, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#f0a0b0'; ctx.beginPath(); ctx.arc(it.x - 6, it.y - 8, 5, 0, 7); ctx.arc(it.x + 6, it.y - 8, 5, 0, 7); ctx.fill(); ctx.strokeStyle = '#9a9a9a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(it.x + 12, it.y); ctx.quadraticCurveTo(it.x + 28, it.y + 8, it.x + 30, it.y - 6); ctx.stroke(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(it.x - 4, it.y - 2, 1.5, 0, 7); ctx.arc(it.x + 4, it.y - 2, 1.5, 0, 7); ctx.fill(); }
     else { ctx.fillStyle = '#ff7f27'; ctx.beginPath(); ctx.arc(it.x, it.y, 14, 0, 7); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.stroke(); }
+    ctx.restore();
   } else if (type === 'buttons') {
     ctx.fillStyle = '#6d6d75'; ctx.beginPath(); ctx.ellipse(it.x, it.y + 6, it.r + 6, (it.r + 6) * 0.6, 0, 0, 7); ctx.fill(); // подставка
     ctx.fillStyle = '#4a4a52'; ctx.beginPath(); ctx.ellipse(it.x, it.y + 3, it.r + 6, (it.r + 6) * 0.6, 0, 0, 7); ctx.fill();
@@ -1060,8 +1132,8 @@ function drawGame() {
     if (r.inv > 0 && Math.floor(G.t * 12) % 2) return;
     ctx.save();
     if (r.swim > 0) { ctx.beginPath(); ctx.rect(0, 0, W, r.y + 6); ctx.clip(); } // в воде видно только верх
-    if (G.who === 'cat') { drawCat(r.x, r.y, 0.95, { legT: r.legT, flip: r.flip, dirty: r.dirty, mood: G.result === 'lose' ? 'shock' : G.charged ? 'happy' : 'calm' }); if (G.shield.on > 0) { ctx.strokeStyle = 'rgba(80,180,255,0.9)'; ctx.lineWidth = 4; ctx.fillStyle = 'rgba(120,200,255,0.25)'; ctx.beginPath(); ctx.arc(r.x, r.y - 6, 44, 0, 7); ctx.fill(); ctx.stroke(); } }
-    else { drawBoy(r.x, r.y + 20, G.boyScale * 0.95, { legT: r.legT, back: r.back, dirty: r.dirty, shield: G.shield.on > 0, mouth: G.result === 'lose' ? 1 : G.charged ? 0.5 : 0, blink: Math.floor(G.t * 2) % 7 === 0 }); }
+    if (G.who === 'cat') { drawCat(r.x, r.y, 1.15, { legT: r.legT, flip: r.flip, dirty: r.dirty, mood: G.result === 'lose' ? 'shock' : G.charged ? 'happy' : 'calm' }); if (G.shield.on > 0) { ctx.strokeStyle = 'rgba(80,180,255,0.9)'; ctx.lineWidth = 4; ctx.fillStyle = 'rgba(120,200,255,0.25)'; ctx.beginPath(); ctx.arc(r.x, r.y - 6, 44, 0, 7); ctx.fill(); ctx.stroke(); } }
+    else { drawBoy(r.x, r.y + 20, G.boyScale * 1.1, { flip: r.flip, legT: r.legT, back: r.back, dirty: r.dirty, shield: G.shield.on > 0, mouth: G.result === 'lose' ? 1 : G.charged ? 0.5 : 0, blink: Math.floor(G.t * 2) % 7 === 0 }); }
     ctx.restore();
     if (r.swim > 0) { ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.ellipse(r.x, r.y + 8, 34, 9, 0, 0, 7); ctx.fill(); text(String(Math.ceil(3 - r.swim)), r.x, r.y - 50, 26, '#fff'); }
     if (r.poison > 0) { ctx.fillStyle = 'rgba(95,191,58,0.35)'; ctx.beginPath(); ctx.ellipse(r.x, r.y - 10, 34, 46, 0, 0, 7); ctx.fill(); text('яд ' + Math.ceil(r.poison), r.x, r.y - 70, 13, '#b8ff8a'); }
@@ -1071,18 +1143,17 @@ function drawGame() {
   };
   const drawBossShield = () => { if (m.face === undefined || m.stun > 0) return; ctx.save(); ctx.translate(head.x, head.y); ctx.rotate(m.face); ctx.fillStyle = 'rgba(80,180,255,0.3)'; ctx.strokeStyle = '#7fd8ff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.closePath(); ctx.fill(); ctx.restore(); };
   const drawMonster = () => {
-    if (!G.boss) { drawCaterpillar(m, G.who === 'cat' ? 'boy' : 'cat'); if (m.dirty) { ctx.fillStyle = 'rgba(107,74,43,0.75)'; m.segs.forEach((sg, i) => { if (i % 2) return; const rr2 = m.r * (1 - i / (m.segs.length + 4) * 0.5); ctx.beginPath(); ctx.ellipse(sg.x + (i % 3 - 1) * 4, sg.y + (i % 2 ? 4 : -3), rr2 * 0.55, rr2 * 0.35, i, 0, 7); ctx.fill(); }); } if (m.wash > 0) { ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.ellipse(head.x, head.y + 8, m.r * 1.6, 8, 0, 0, 7); ctx.fill(); } return; }
+    if (!G.boss) { drawCaterpillar(m, G.who === 'cat' ? 'boy' : 'cat'); if (m.snake > 0) { ctx.fillStyle = 'rgba(95,191,58,0.55)'; m.segs.forEach((sg, i) => { if (!i) return; const rr2 = m.r * (1 - i / (m.segs.length + 4) * 0.5); ctx.beginPath(); ctx.moveTo(sg.x, sg.y - rr2 * 0.9); ctx.lineTo(sg.x + rr2 * 0.6, sg.y); ctx.lineTo(sg.x, sg.y + rr2 * 0.9); ctx.lineTo(sg.x - rr2 * 0.6, sg.y); ctx.closePath(); ctx.fill(); }); } if (m.dirty) { ctx.fillStyle = 'rgba(107,74,43,0.75)'; m.segs.forEach((sg, i) => { if (i % 2) return; const rr2 = m.r * (1 - i / (m.segs.length + 4) * 0.5); ctx.beginPath(); ctx.ellipse(sg.x + (i % 3 - 1) * 4, sg.y + (i % 2 ? 4 : -3), rr2 * 0.55, rr2 * 0.35, i, 0, 7); ctx.fill(); }); } if (m.wash > 0) { ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.ellipse(head.x, head.y + 8, m.r * 1.6, 8, 0, 0, 7); ctx.fill(); } return; }
     const sc = G.boyScale * 1.35, ang = Math.atan2(r.y - head.y, r.x - head.x), flip = r.x < head.x;
     if (G.who === 'boy') { // кот-босс с автоматом
       if (m.stun > 0) { ctx.save(); ctx.translate(head.x, head.y + 10); ctx.rotate(flip ? -1.3 : 1.3); drawCat(0, 0, 1.15, { legT: 0, flip }); ctx.restore(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; for (const sd of [-1, 1]) { const ex = head.x + sd * 10, ey = head.y - 20; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 5); ctx.lineTo(ex + 5, ey + 5); ctx.moveTo(ex + 5, ey - 5); ctx.lineTo(ex - 5, ey + 5); ctx.stroke(); } return; }
       drawCat(head.x, head.y + 10, 1.15, { legT: m.legT = (m.legT || 0) + 0.25, flip });
       ctx.save(); ctx.translate(head.x, head.y - 2); ctx.rotate(ang); if (flip) ctx.scale(1, -1);
-      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
+      ctx.fillStyle = '#2a2a2e'; if (G.minigun) { ctx.fillRect(-10, -7, 52, 14); ctx.fillStyle = '#55595f'; for (let i = -1; i <= 1; i++) ctx.fillRect(30, i * 4 - 1.5, 20, 3); ctx.fillStyle = '#2a2a2e'; } else { ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); } ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
       if (G.flash > 0) { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.moveTo(42, -2); ctx.lineTo(60, -9); ctx.lineTo(52, 0); ctx.lineTo(60, 8); ctx.closePath(); ctx.fill(); }
       ctx.restore();
       drawBossShield();
-      drawBossShield();
-    text('БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
+      text(G.minigun ? 'БОСС С МИНИГАНОМ' : 'БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
       { const per = m.maxHp / 5; for (let i = 0; i < 5; i++) { const full = m.hp > i * per + per * 0.5, half = !full && m.hp > i * per; text(full ? '❤' : half ? '💔' : '♡', head.x - 48 + i * 24, head.y - m.r - 58, 20, full || half ? '#ff4d6d' : '#ffffff66'); } }
       return;
     }
@@ -1090,10 +1161,11 @@ function drawGame() {
     drawBoy(head.x, head.y + 20, sc, { mouth: G.burstLeft > 0 ? 0.8 : 0.3, legT: m.legT = (m.legT || 0) + 0.25, back: false });
     // автомат в руках, направлен на Ника
     ctx.save(); ctx.translate(head.x, head.y - 8); ctx.rotate(ang); if (flip) ctx.scale(1, -1);
-    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
+    ctx.fillStyle = '#2a2a2e'; if (G.minigun) { ctx.fillRect(-10, -7, 52, 14); ctx.fillStyle = '#55595f'; for (let i = -1; i <= 1; i++) ctx.fillRect(30, i * 4 - 1.5, 20, 3); ctx.fillStyle = '#2a2a2e'; } else { ctx.fillRect(-10, -4, 46, 8); ctx.fillRect(28, -6, 14, 5); } ctx.fillStyle = '#5a3a22'; ctx.fillRect(-22, -5, 14, 9); ctx.fillRect(4, 4, 7, 14); ctx.fillStyle = '#2a2a2e'; ctx.fillRect(14, 4, 6, 10);
     if (G.flash > 0) { ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.moveTo(42, -2); ctx.lineTo(60, -9); ctx.lineTo(52, 0); ctx.lineTo(60, 8); ctx.closePath(); ctx.fill(); }
     ctx.restore();
-    text('БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
+    drawBossShield();
+    text(G.minigun ? 'БОСС С МИНИГАНОМ' : 'БОСС', head.x, head.y - m.r - 78, 14, '#ff4d6d');
     { const per = m.maxHp / 5; for (let i = 0; i < 5; i++) { const full = m.hp > i * per + per * 0.5, half = !full && m.hp > i * per; text(full ? '❤' : half ? '💔' : '♡', head.x - 48 + i * 24, head.y - m.r - 58, 20, full || half ? '#ff4d6d' : '#ffffff66'); } }
   };
   const drawIce = () => { if (!(m.frozen > 0)) return; ctx.fillStyle = 'rgba(170,220,255,0.55)'; ctx.strokeStyle = '#e6f6ff'; ctx.lineWidth = 3; ctx.beginPath(); rr(head.x - m.r - 14, head.y - m.r - 26, m.r * 2 + 28, m.r * 2 + 40, 10); ctx.fill(); ctx.stroke(); text('❄ ' + Math.ceil(m.frozen), head.x, head.y - m.r - 32, 16, '#fff'); };
@@ -1113,8 +1185,8 @@ function drawGame() {
   // хп монстра
   const hx = head.x - 45, hy = head.y - m.r - 50;
   if (!G.boss) { ctx.fillStyle = '#0008'; ctx.beginPath(); rr(hx, hy, 90, 12, 6); ctx.fill(); ctx.fillStyle = '#e63946'; ctx.beginPath(); rr(hx, hy, Math.max(4, 90 * m.hp / m.maxHp), 12, 6); ctx.fill(); text(`${m.hp}`, head.x, hy - 4, 13); }
-  if (!G.boss) { const full = Math.max(3.2, 6.5 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(k >= 1 ? 'яд готов' : 'яд копится', head.x, hy + 31, 10, '#cfe');
-    if (G.spitT < 0.45 && m.stun <= 0) { const a = Math.atan2(r.y - head.y, r.x - head.x), L = 26 + Math.sin(performance.now() / 40) * 6; ctx.strokeStyle = '#e63946'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(head.x + Math.cos(a) * m.r * 0.8, head.y + Math.sin(a) * m.r * 0.8); const tx = head.x + Math.cos(a) * (m.r * 0.8 + L), ty = head.y + Math.sin(a) * (m.r * 0.8 + L); ctx.lineTo(tx, ty); ctx.lineTo(tx + Math.cos(a - 0.6) * 7, ty + Math.sin(a - 0.6) * 7); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a + 0.6) * 7, ty + Math.sin(a + 0.6) * 7); ctx.stroke(); } /* язык как у змеи перед плевком */ }
+  if (!G.boss) { const full = Math.max(3.2, 6.5 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(m.snake > 0 ? 'ЗМЕЯ!' : k >= 1 ? 'змея готова' : 'готовится к броску', head.x, hy + 31, 10, m.snake > 0 ? '#b8ff8a' : '#cfe');
+    if ((G.spitT < 0.45 || m.snake > 0) && m.stun <= 0) { const a = Math.atan2(r.y - head.y, r.x - head.x), L = 26 + Math.sin(performance.now() / 40) * 6; ctx.strokeStyle = '#e63946'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(head.x + Math.cos(a) * m.r * 0.8, head.y + Math.sin(a) * m.r * 0.8); const tx = head.x + Math.cos(a) * (m.r * 0.8 + L), ty = head.y + Math.sin(a) * (m.r * 0.8 + L); ctx.lineTo(tx, ty); ctx.lineTo(tx + Math.cos(a - 0.6) * 7, ty + Math.sin(a - 0.6) * 7); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a + 0.6) * 7, ty + Math.sin(a + 0.6) * 7); ctx.stroke(); } /* язык как у змеи перед плевком */ }
   ctx.restore();
   // HUD
   ctx.fillStyle = 'rgba(20,24,48,0.75)'; ctx.fillRect(0, 0, W, 48);
@@ -1145,7 +1217,7 @@ function drawGame() {
     panel(W / 2 - 330, 60, 660, 118, 'rgba(20,24,48,0.9)');
     text('ЦЕЛЬ УРОВНЯ', W / 2, 90, 20, '#ffe08a');
     text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.' : 'БОСС! Кот с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
-    text('Гусеница кусается и плюётся ядом (следи за языком) — яд отнимает энергию и замедляет. Ловушки бьют всех; в грязи гусеница пачкается и ползёт медленнее, пока не помоется.', W / 2, 145, 15, '#ff9f9f', 'center', false);
+    text('Гусеница время от времени превращается в змею: высовывает язык и бросается — укус ядовитый, он отнимает энергию и замедляет. Ловушки бьют всех; в грязи она пачкается и ползёт медленнее.', W / 2, 145, 15, '#ff9f9f', 'center', false);
     text('Грязь пачкает: грязный может прыгнуть в воду, помыться 3 секунды и вылететь. Чистого вода не пускает.', W / 2, 168, 13, '#bbb', 'center', false);
     ctx.globalAlpha = 1;
   }
@@ -1190,15 +1262,16 @@ function drawMenu() {
     { const fb = { x: menuBoy.x, y: menuBoy.y + 55 }; menuPush(fb, 48); menuBoy.x = fb.x; menuBoy.y = fb.y - 55; }
   }
   const drawC = () => { drawCat(menuCat.x, menuCat.y, 1.4, { legT: menuCat.legT, flip: menuCat.flip, mood: catEyesOpen ? 'calm' : 'happy' }); menuCatHit = { x: menuCat.x - 60, y: menuCat.y - 50, w: 120, h: 100 }; };
-  const drawB = () => drawBoy(menuBoy.x, menuBoy.y, 1.9, { legT: menuBoy.legT, mouth: 0, blink: Math.floor(t * 2) % 7 === 0, back: false });
+  const drawB = () => drawBoy(menuBoy.x, menuBoy.y, 1.9, { flip: menuBoy.flip, legT: menuBoy.legT, mouth: 0, blink: Math.floor(t * 2) % 7 === 0, back: false });
   if (menuCat.y < menuBoy.y - 30) { drawC(); drawB(); } else { drawB(); drawC(); }
   // кнопки — внизу, поменьше
   btn(W / 2 - 140, 408, 280, 44, `Играть · уровень ${nxt}`, () => startLevel(nxt), '#2ecc71');
   btn(W / 2 - 140, 460, 136, 38, 'Уровни', () => openMap(), '#3b82f6', true);
   btn(W / 2 + 4, 460, 136, 38, 'Кухня', () => { kitchenWho = who; screen = 'kitchen'; }, '#e67e22', true);
   btn(W / 2 - 140, 506, 136, 38, 'Гардероб', () => screen = 'wardrobe', '#9b59b6', true);
-  btn(W / 2 + 4, 506, 136, 38, 'Свой мир', () => screen = 'sandbox', '#16a085', true);
-  text('Ник: стрелки · Мальчик: WASD · или держи палец рядом с героем. Тап по Нику — глаза', W / 2, H - 6, 11, '#ffffffbb', 'center', false);
+  btn(W / 2 + 4, 506, 136, 38, 'Миры', () => { openMap(); showWorlds = true; mapScroll = 0; }, '#16a085', true);
+  btn(W / 2 - 140, 550, 280, 36, '⚽ Футбол: пенальти', () => startFootball(), '#f39c12', true);
+  if (H > 620) text('Ник: стрелки · Мальчик: WASD · или держи палец рядом с героем. Тап по Нику — глаза', W / 2, H - 6, 11, '#ffffffbb', 'center', false);
 }
 // расположение кругляшков: по 6 в ряд змейкой, перед каждым миром заголовок
 const MAP = { pos: [], head: [], height: 0 };
@@ -1216,7 +1289,7 @@ function plural(n) { const a = n % 10, b = n % 100; return (a === 1 && b !== 11)
 function openMap() { screen = 'map'; mapScroll = clamp(MAP.pos[S.level].y - H / 2, 0, MAP.height - H + 60); }
 function drawMap() {
   drawArena(3); ctx.fillStyle = '#0006'; ctx.fillRect(0, 0, W, H);
-  mapScroll = clamp(mapScroll, 0, Math.max(0, MAP.height - H + 60));
+  mapScroll = clamp(mapScroll, 0, Math.max(0, showWorlds ? 140 + Math.ceil(WORLDS.length / 2) * 88 - H : MAP.height - H + 60));
   ctx.save(); ctx.translate(0, -mapScroll);
   // дорожка между кругляшками
   ctx.strokeStyle = '#ffffff55'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath();
@@ -1225,7 +1298,7 @@ function drawMap() {
     const hy = MAP.head[w]; if (hy > mapScroll - 80 && hy < mapScroll + H) {
       const first = w ? ENDS[w - 1] + 1 : 1, open = S.best >= first;
       panel(60, hy, W - 120, 56, open ? 'rgba(20,24,48,0.85)' : 'rgba(40,40,40,0.85)');
-      text(`Мир ${w + 1} «${WORLDS[w].name}»${open ? '' : ' 🔒'}`, 80, hy + 36, 24, open ? '#ffe08a' : '#888', 'left');
+      text(`Мир ${w + 1} «${WORLDS[w].name}» · ${TIER_NAMES[tierOf(w)]}${open ? '' : ' 🔒'}`, 80, hy + 36, 24, open ? '#ffe08a' : '#888', 'left');
       text(w % 2 === 0 ? 'котик убегает' : 'мальчик убегает со щитом', W - 80, hy + 36, 15, open ? '#fff' : '#888', 'right', false);
     }
   }
@@ -1238,7 +1311,7 @@ function drawMap() {
     ctx.strokeStyle = cur ? '#fff' : '#0004'; ctx.lineWidth = cur ? 4 : 2; ctx.stroke();
     text(String(lv), p.x, p.y + 7, 20, open ? '#fff' : '#999');
     if (!open) text('🔒', p.x, p.y - 20, 12); else if (done) text('★', p.x, p.y - 22, 14, '#ffe600');
-    if (lv % LEVELS_PER_WORLD === 0) text('БОСС', p.x, p.y + 44, 11, '#ff4d6d');
+    if (lv % LEVELS_PER_WORLD === 0) text('СУПЕРБОСС', p.x, p.y + 44, 10, '#ff4d6d'); else if (lv % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) text('БОСС', p.x, p.y + 44, 11, '#ff4d6d');
     if (open) buttons.push({ x: p.x - R, y: p.y - R - mapScroll, w: R * 2, h: R * 2, cb: () => { S.level = lv; save(); startLevel(lv); } });
   }
   ctx.restore();
@@ -1246,19 +1319,20 @@ function drawMap() {
   text('Уровни — листай пальцем или колёсиком. Открыт только следующий, пройденные можно переиграть', 14, 31, 15, '#ffe08a', 'left');
   btn(W - 120, 8, 110, 32, 'Меню', () => screen = 'menu', '#555', true);
   btn(W - 240, 8, 110, 32, 'К текущему', () => openMap(), '#3b82f6', true);
-  btn(W - 360, 8, 110, 32, 'Миры', () => showWorlds = !showWorlds, showWorlds ? '#2ecc71' : '#8e44ad', true);
-  if (showWorlds) { // миры: картинка, название, кто убегает, сколько уровней осталось до открытия
-    panel(40, 60, W - 80, 80 + Math.ceil(WORLDS.length / 2) * 88);
-    text('Миры — какие они будут', W / 2, 92, 22, '#ffe08a');
+  btn(W - 360, 8, 110, 32, 'Миры', () => { showWorlds = !showWorlds; mapScroll = showWorlds ? 0 : clamp(MAP.pos[S.level].y - H / 2, 0, MAP.height - H + 60); }, showWorlds ? '#2ecc71' : '#8e44ad', true);
+  if (showWorlds) { // миры: картинка, название, кто убегает, сколько уровней осталось до открытия; список длинный — крутится вместе с картой
+    ctx.save(); ctx.translate(0, -mapScroll); panel(40, 60, W - 80, 80 + Math.ceil(WORLDS.length / 2) * 88);
+    text(`Миры: ${WORLDS.length}, по ${LEVELS_PER_WORLD} уровней. 1–25 лёгкие, 26–50 средние, 51–76 сложные`, W / 2, 92, 20, '#ffe08a');
     WORLDS.forEach((wd, i) => {
       const first = i ? ENDS[i - 1] + 1 : 1, open = S.best >= first, x = 60 + (i % 2) * 430, y = 112 + Math.floor(i / 2) * 88;
       ctx.fillStyle = open ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'; ctx.beginPath(); rr(x, y, 410, 78, 10); ctx.fill();
       ctx.save(); ctx.beginPath(); rr(x + 8, y + 8, 100, 62, 8); ctx.clip(); ctx.translate(x + 8, y + 8); ctx.scale(100 / W, 62 / H); drawArena(i); if (!open) { ctx.fillStyle = '#0009'; ctx.fillRect(0, 0, W, H); } ctx.restore(); // мини-картинка мира
-      text(`Мир ${i + 1} «${wd.name}»`, x + 120, y + 28, 18, open ? '#fff' : '#999', 'left');
+      text(`Мир ${i + 1} «${wd.name}» · ${TIER_NAMES[tierOf(i)]}`, x + 120, y + 28, 18, open ? '#fff' : '#999', 'left');
       text(i % 2 === 0 ? 'котик убегает от мальчика-гусеницы' : 'мальчик убегает от кота-гусеницы', x + 120, y + 48, 12, open ? '#ddd' : '#888', 'left', false);
       text(open ? `уровни ${first}–${ENDS[i]}` : `🔒 пройди ещё ${first - S.best} ${plural(first - S.best)}`, x + 120, y + 67, 13, open ? '#7CFC9A' : '#ffd166', 'left', false);
-      if (open) buttons.push({ x, y, w: 410, h: 78, cb: () => { mapScroll = clamp(MAP.head[i] - 20, 0, MAP.height - H + 60); showWorlds = false; } });
+      if (open) buttons.push({ x, y: y - mapScroll, w: 410, h: 78, cb: () => { showWorlds = false; mapScroll = clamp(MAP.head[i] - 20, 0, MAP.height - H + 60); } });
     });
+    ctx.restore();
   }
 }
 function drawEnd() {
@@ -1290,6 +1364,13 @@ function drawFood(x, y, k, f, s = 1) {
   else if (k === 'pizza') { ctx.fillStyle = f.c; tri(0, -18, -18, 16, 18, 16); ctx.fillStyle = '#d33'; for (const [a, b] of [[-5, 5], [6, 2], [0, 11]]) { ctx.beginPath(); ctx.arc(a, b, 3.5, 0, 7); ctx.fill(); } }
   else if (k === 'banana') { ctx.strokeStyle = f.c; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, -8, 18, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
   else if (k === 'icecream') { ctx.fillStyle = '#e6b36b'; tri(-11, 0, 11, 0, 0, 22); ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(0, -6, 12, 0, 7); ctx.fill(); ctx.fillStyle = '#d33'; ctx.beginPath(); ctx.arc(2, -16, 3, 0, 7); ctx.fill(); }
+  else if (k === 'chicken') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(-4, 2, 18, 12, -0.3, 0, 7); ctx.fill(); ctx.fillStyle = '#f6e7cf'; ctx.fillRect(10, -4, 16, 5); ctx.beginPath(); ctx.arc(26, -2, 4, 0, 7); ctx.fill(); }
+  else if (k === 'cream') { ctx.fillStyle = '#fff'; ctx.beginPath(); rr(-14, -8, 28, 22, 5); ctx.fill(); ctx.fillStyle = '#3b82f6'; ctx.fillRect(-14, -14, 28, 7); ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(0, -8, 12, 4, 0, 0, 7); ctx.fill(); }
+  else if (k === 'apple') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(-6, 2, 13, 0, 7); ctx.arc(6, 2, 13, 0, 7); ctx.fill(); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-1.5, -16, 3, 9); ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(6, -13, 7, 3.5, -0.5, 0, 7); ctx.fill(); }
+  else if (k === 'pear') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(0, 6, 13, 0, 7); ctx.arc(0, -8, 8, 0, 7); ctx.fill(); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-1.5, -20, 3, 8); }
+  else if (k === 'melon') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(0, -4, 20, 0, Math.PI); ctx.fill(); ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(0, -4, 15, 0, Math.PI); ctx.fill(); ctx.fillStyle = '#222'; for (const [a, b] of [[-7, 3], [0, 6], [7, 3]]) { ctx.beginPath(); ctx.ellipse(a, b, 1.5, 2.5, 0, 0, 7); ctx.fill(); } }
+  else if (k === 'berry') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.moveTo(0, 16); ctx.quadraticCurveTo(-18, 0, -8, -8); ctx.lineTo(8, -8); ctx.quadraticCurveTo(18, 0, 0, 16); ctx.fill(); ctx.fillStyle = '#4caf50'; for (const a of [-8, 0, 8]) tri(a - 4, -8, a + 4, -8, a, -16); ctx.fillStyle = '#fff6b0'; for (const [a, b] of [[-5, 0], [4, 2], [0, 7], [-2, -4], [6, -3]]) { ctx.beginPath(); ctx.arc(a, b, 1.2, 0, 7); ctx.fill(); } }
+  else if (k === 'orange') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(0, 0, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(4, -14, 6, 3, -0.4, 0, 7); ctx.fill(); ctx.fillStyle = '#ffd59a'; ctx.beginPath(); ctx.arc(-5, -5, 3, 0, 7); ctx.fill(); }
   else if (k === 'sandwich') { ctx.fillStyle = f.c; ctx.fillRect(-18, -10, 36, 8); ctx.fillRect(-18, 4, 36, 8); ctx.fillStyle = '#f2c94c'; ctx.fillRect(-16, -3, 32, 7); ctx.fillStyle = '#4caf50'; ctx.fillRect(-19, -4, 38, 3); }
   ctx.restore();
 }
@@ -1306,15 +1387,15 @@ function drawKitchen() {
   energyBar(80, 450, 240, kitchenWho, kitchenWho === 'cat' ? 'Котик' : 'Мальчик');
   const keysF = Object.keys(FOOD[kitchenWho]);
   keysF.forEach((k, i) => {
-    const f = FOOD[kitchenWho][k], cnt = S.food[kitchenWho + ':' + k] || 0, x = 420 + (i % 2) * 240, y = 190 + Math.floor(i / 2) * 150;
-    panel(x, y, 220, 130, cnt ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)');
-    drawFood(x + 50, y + 55, k, f, 1.3);
-    text(f.n, x + 150, y + 40, 18, cnt ? '#fff' : '#888'); text(`+${f.e}⚡  ×${cnt}`, x + 150, y + 66, 15, cnt ? '#ffd166' : '#777');
-    if (!cnt) btn(x + 100, y + 82, 100, 36, `Купить ₽${f.p}`, () => { if (S.coins >= f.p) { S.coins -= f.p; S.food[kitchenWho + ':' + k] = 1; save(); SFX.coin(); } else say('Не хватает монет — пройди уровень', 660, 170, '#ff6b6b'); }, S.coins >= f.p ? '#3b82f6' : '#6b6b80', true);
-    else btn(x + 100, y + 82, 100, 36, 'Кормить', () => { S.food[kitchenWho + ':' + k]--; S.energy[kitchenWho] = Math.min(MAX_ENERGY, S.energy[kitchenWho] + f.e); save(); SFX.eat(); if (kitchenWho === 'cat') SFX.meow(); say(kitchenWho === 'cat' ? 'Ням! МЯУ!' : 'Ням-ням!', 200, 250, '#7CFC9A'); }, '#e67e22', true);
+    const f = FOOD[kitchenWho][k], cnt = S.food[kitchenWho + ':' + k] || 0, x = 390 + (i % 3) * 185, y = 160 + Math.floor(i / 3) * 112;
+    panel(x, y, 175, 104, cnt ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)');
+    drawFood(x + 36, y + 46, k, f, 1.0);
+    text(f.n, x + 118, y + 32, 16, cnt ? '#fff' : '#888'); text(`+${f.e}⚡  ×${cnt}`, x + 118, y + 54, 13, cnt ? '#ffd166' : '#777');
+    if (!cnt) btn(x + 70, y + 66, 96, 30, `Купить ₽${f.p}`, () => { if (S.coins >= f.p) { S.coins -= f.p; S.food[kitchenWho + ':' + k] = 1; save(); SFX.coin(); } else say('Не хватает монет — пройди уровень', 660, 170, '#ff6b6b'); }, S.coins >= f.p ? '#3b82f6' : '#6b6b80', true);
+    else btn(x + 70, y + 66, 96, 30, 'Кормить', () => { S.food[kitchenWho + ':' + k]--; S.energy[kitchenWho] = Math.min(MAX_ENERGY, S.energy[kitchenWho] + f.e); save(); SFX.eat(); if (kitchenWho === 'cat') SFX.meow(); say(kitchenWho === 'cat' ? 'Ням! МЯУ!' : 'Ням-ням!', 200, 250, '#7CFC9A'); }, '#e67e22', true);
   });
-  if (!keysF.some(k => S.food[kitchenWho + ':' + k])) text(`Еды нет — купи за монеты (₽ ${S.coins}) или поймай в уровне`, 660, 500, 14, '#ffd166');
-  else text(`₽ ${S.coins}`, 660, 500, 16, '#ffd700');
+  if (!keysF.some(k => S.food[kitchenWho + ':' + k])) text(`Еды нет — купи за монеты (₽ ${S.coins}) или поймай в уровне`, 660, H - 56, 14, '#ffd166');
+  else text(`₽ ${S.coins}`, 660, H - 56, 16, '#ffd700');
   btn(W - 230, H - 70, 160, 40, 'В меню', () => screen = 'menu', '#555', true);
   if (S.energy[runnerOf(S.level)] >= LEVEL_COST) btn(W - 410, H - 70, 160, 40, 'Играть', () => startLevel(S.level), '#2ecc71', true);
 }
@@ -1770,6 +1851,7 @@ function frame(now) {
   else if (screen === 'looks') drawLooksScreen();
   else if (screen === 'model3d') { drawModel3D(); }
   else if (screen === 'sandbox') { updateSandbox(dt); drawSandbox(); }
+  else if (screen === 'football') { updateFootball(dt); drawFootball(); }
   for (const m of msg) { m.life -= dt; ctx.globalAlpha = clamp(m.life / m.max * 2, 0, 1); text(m.t, m.x, m.y - (1 - m.life / m.max) * 30, 20, m.col); } ctx.globalAlpha = 1; msg = msg.filter(m => m.life > 0);
   requestAnimationFrame(frame);
 }
