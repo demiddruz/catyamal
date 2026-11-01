@@ -839,13 +839,13 @@ function startLevel(level) {
   const hits = 3 + Math.floor(liw / 5), hp = 100 * liw; // выстрелов до победы: 3–7, то есть минимум два задания  // 100, 200, 300… уронов
   G = {
     level, world: w, liw, who, t: 0, result: null, resultT: 0, boyScale, hits,
-    runner: { x: 150, y: H / 2, r: 27, speed: who === 'cat' ? 215 : 225, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
+    runner: { x: 150, y: H / 2, r: 30, speed: who === 'cat' ? 215 : 225, vx: 0, vy: 0, legT: 0, back: false, inv: 0, frozen: 0, armor: w >= 2 ? 1 : 0, hp: 100, lives: 3 },
     boss: liw >= LEVELS_PER_WORLD - 1, minigun: liw === LEVELS_PER_WORLD || w >= 2, // два последних уровня мира — боссы; последний (и все с 3-го мира) с миниганом
-    monster: { r: 44 + Math.min(8, (w % 10) * 2), speed: Math.round(Math.min(150, 84 + liw * 0.6 + (w % 10) * 3) * [1, 1.12, 1.25][tierOf(w)]), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
+    monster: { r: 30 + Math.min(8, (w % 10) * 2), speed: Math.round(Math.min(150, 84 + liw * 0.6 + (w % 10) * 3) * [1, 1.12, 1.25][tierOf(w)]), hp, maxHp: hp, dmg: Math.ceil(hp / hits), stun: 0, segs: [], mouth: 0, roarT: 0 },
     obstacles: [], coins: [], bullets: [], mBullets: [], spitT: 5, task: null, charged: false, taskN: 0,
     shield: { on: 0, cd: 0 }, meowT: 2, particles: [], introT: 3.2, earned: 0, charges: 0,
   };
-  const nseg = Math.min(25, 13 + (w % 10) * 2 + tierOf(w) * 2); for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 18, y: H / 2 });
+  const nseg = Math.min(23, 11 + (w % 10) * 2 + tierOf(w) * 2); for (let i = 0; i < nseg; i++) G.monster.segs.push({ x: W - 150 - i * 18, y: H / 2 });
   if (G.boss) { G.monster.hp = G.monster.maxHp = Math.round(hp * (G.minigun ? 2 : 1.5)); G.monster.dmg = Math.ceil(G.monster.maxHp / 7); G.monster.speed = Math.min(170, G.monster.speed * 0.8); G.monster.r = 30; G.burstT = 3; G.burstLeft = 0; }
   // препятствия
   const kinds = ['pool', 'rock', 'wall']; // обычные препятствия со 2-го уровня
@@ -1032,7 +1032,7 @@ function update(dt) {
   G.spitT -= dt;
   if (!G.boss && G.spitT <= 0 && m.stun <= 0 && !peace) {
     G.spitT = Math.max(3.2, 6.5 - G.level * 0.05); const d = dist(r, head) || 1;
-    if (d < 340) { m.snake = 1.3; SFX.shot(); say('ШШШ! ЗМЕЯ!', head.x, head.y - m.r - 30, '#8fd46b', 0.9); } else G.spitT = 0.6; // змеиный бросок: быстро тянется к бегуну и кусает ядом
+    if (d < 340) { m.snake = 1.3; SFX.shot(); say('ШШШ! БРОСОК!', head.x, head.y - m.r - 30, '#8fd46b', 0.9); } else G.spitT = 0.6; // змеиный бросок: быстро тянется к бегуну и кусает ядом
   }
   for (const b of G.mBullets) {
     b.x += b.vx * dt; b.y += b.vy * dt;
@@ -1228,7 +1228,7 @@ function drawGame() {
     if (r.inv > 0 && Math.floor(G.t * 12) % 2) return;
     ctx.save();
     if (r.swim > 0) { ctx.beginPath(); ctx.rect(0, 0, W, r.y + 6); ctx.clip(); } // в воде видно только верх
-    if (G.who === 'cat') { drawCat(r.x, r.y, 1.15, { legT: r.legT, flip: r.flip, dirty: r.dirty, mood: G.result === 'lose' ? 'shock' : G.charged ? 'happy' : 'calm' }); if (G.shield.on > 0) { ctx.strokeStyle = 'rgba(80,180,255,0.9)'; ctx.lineWidth = 4; ctx.fillStyle = 'rgba(120,200,255,0.25)'; ctx.beginPath(); ctx.arc(r.x, r.y - 6, 44, 0, 7); ctx.fill(); ctx.stroke(); } }
+    if (G.who === 'cat') { drawCat(r.x, r.y, 1.35, { legT: r.legT, flip: r.flip, dirty: r.dirty, mood: G.result === 'lose' ? 'shock' : G.charged ? 'happy' : 'calm' }); if (G.shield.on > 0) { ctx.strokeStyle = 'rgba(80,180,255,0.9)'; ctx.lineWidth = 4; ctx.fillStyle = 'rgba(120,200,255,0.25)'; ctx.beginPath(); ctx.arc(r.x, r.y - 6, 44, 0, 7); ctx.fill(); ctx.stroke(); } }
     else { drawBoy(r.x, r.y + 20, G.boyScale * 1.1, { flip: r.flip, legT: r.legT, back: r.back, dirty: r.dirty, shield: G.shield.on > 0, mouth: G.result === 'lose' ? 1 : G.charged ? 0.5 : 0, blink: Math.floor(G.t * 2) % 7 === 0 }); }
     ctx.restore();
     if (r.swim > 0) { ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.ellipse(r.x, r.y + 8, 34, 9, 0, 0, 7); ctx.fill(); text(String(Math.ceil(3 - r.swim)), r.x, r.y - 50, 26, '#fff'); }
@@ -1239,7 +1239,6 @@ function drawGame() {
   };
   const drawBossShield = () => { if (m.face === undefined || m.stun > 0) return; ctx.save(); ctx.translate(head.x, head.y); ctx.rotate(m.face); ctx.fillStyle = 'rgba(80,180,255,0.3)'; ctx.strokeStyle = '#7fd8ff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, m.r + 22, -1.25, 1.25); ctx.closePath(); ctx.fill(); ctx.restore(); };
   const drawMonster = () => {
-    if (!G.boss && m.snake > 0) { drawSnake(m, r); return; }
     if (!G.boss) { drawCaterpillar(m, G.who === 'cat' ? 'boy' : 'cat'); if (false) { ctx.fillStyle = 'rgba(95,191,58,0.55)'; m.segs.forEach((sg, i) => { if (!i) return; const rr2 = m.r * (1 - i / (m.segs.length + 4) * 0.5); ctx.beginPath(); ctx.moveTo(sg.x, sg.y - rr2 * 0.9); ctx.lineTo(sg.x + rr2 * 0.6, sg.y); ctx.lineTo(sg.x, sg.y + rr2 * 0.9); ctx.lineTo(sg.x - rr2 * 0.6, sg.y); ctx.closePath(); ctx.fill(); }); } if (m.dirty) { ctx.fillStyle = 'rgba(107,74,43,0.75)'; m.segs.forEach((sg, i) => { if (i % 2) return; const rr2 = m.r * (1 - i / (m.segs.length + 4) * 0.5); ctx.beginPath(); ctx.ellipse(sg.x + (i % 3 - 1) * 4, sg.y + (i % 2 ? 4 : -3), rr2 * 0.55, rr2 * 0.35, i, 0, 7); ctx.fill(); }); } if (m.wash > 0) { ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.ellipse(head.x, head.y + 8, m.r * 1.6, 8, 0, 0, 7); ctx.fill(); } return; }
     const sc = G.boyScale * 1.35, ang = Math.atan2(r.y - head.y, r.x - head.x), flip = r.x < head.x;
     if (G.who === 'boy') { // кот-босс с автоматом
@@ -1282,7 +1281,7 @@ function drawGame() {
   // хп монстра
   const hx = head.x - 45, hy = head.y - m.r - 50;
   if (!G.boss) { ctx.fillStyle = '#0008'; ctx.beginPath(); rr(hx, hy, 90, 12, 6); ctx.fill(); ctx.fillStyle = '#e63946'; ctx.beginPath(); rr(hx, hy, Math.max(4, 90 * m.hp / m.maxHp), 12, 6); ctx.fill(); text(`${m.hp}`, head.x, hy - 4, 13); }
-  if (!G.boss) { const full = Math.max(3.2, 6.5 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(m.snake > 0 ? 'ЗМЕЯ!' : k >= 1 ? 'змея готова' : 'готовится к броску', head.x, hy + 31, 10, m.snake > 0 ? '#b8ff8a' : '#cfe');
+  if (!G.boss) { const full = Math.max(3.2, 6.5 - G.level * 0.05), k = clamp(1 - G.spitT / full, 0, 1); ctx.fillStyle = '#0006'; ctx.beginPath(); rr(hx, hy + 15, 90, 6, 3); ctx.fill(); ctx.fillStyle = k >= 1 ? '#8fd46b' : '#6a9a55'; ctx.beginPath(); rr(hx, hy + 15, Math.max(3, 90 * k), 6, 3); ctx.fill(); text(m.snake > 0 ? 'БРОСОК!' : k >= 1 ? 'бросок готов' : 'готовится к броску', head.x, hy + 31, 10, m.snake > 0 ? '#b8ff8a' : '#cfe');
     if ((G.spitT < 0.45 || m.snake > 0) && m.stun <= 0) { const a = Math.atan2(r.y - head.y, r.x - head.x), L = 26 + Math.sin(performance.now() / 40) * 6; ctx.strokeStyle = '#e63946'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(head.x + Math.cos(a) * m.r * 0.8, head.y + Math.sin(a) * m.r * 0.8); const tx = head.x + Math.cos(a) * (m.r * 0.8 + L), ty = head.y + Math.sin(a) * (m.r * 0.8 + L); ctx.lineTo(tx, ty); ctx.lineTo(tx + Math.cos(a - 0.6) * 7, ty + Math.sin(a - 0.6) * 7); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a + 0.6) * 7, ty + Math.sin(a + 0.6) * 7); ctx.stroke(); } /* язык как у змеи перед плевком */ }
   ctx.restore();
   // HUD
@@ -1309,7 +1308,7 @@ function drawGame() {
     panel(W / 2 - 330, 60, 660, 118, 'rgba(20,24,48,0.9)');
     text('ЦЕЛЬ УРОВНЯ', W / 2, 90, 20, '#ffe08a');
     text(G.boss ? (G.who === 'cat' ? 'БОСС! Мальчик с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.' : 'БОСС! Кот с автоматом и щитом. Спереди лёд не берёт — обеги и стреляй сбоку или сзади, замороженного толкни.') : G.who === 'cat' ? 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).' : 'Задание даёт 2 заряда: ЛЁД замораживает гусеницу на 3 секунды (пробел) — подбеги и толкни её, пока она ледяная. ЩИТ — защита на 4 секунды (Shift).', W / 2, 120, 15, '#fff', 'center', false);
-    text('Гусеница время от времени превращается в змею: высовывает язык и бросается — укус ядовитый, он отнимает энергию и замедляет. Ловушки бьют всех; в грязи она пачкается и ползёт медленнее.', W / 2, 145, 15, '#ff9f9f', 'center', false);
+    text('Гусеница время от времени высовывает язык и бросается как змея — укус ядовитый: отнимает энергию и замедляет. Ловушки бьют всех; в грязи она пачкается и ползёт медленнее.', W / 2, 145, 15, '#ff9f9f', 'center', false);
     text('Грязь пачкает: грязный может прыгнуть в воду, помыться 3 секунды и вылететь. Чистого вода не пускает.', W / 2, 168, 13, '#bbb', 'center', false);
     ctx.globalAlpha = 1;
   }
