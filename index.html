@@ -63,7 +63,7 @@ function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let
 
 // ───────────────────────── сохранение ─────────────────────────
 const FOOD = {
-  cat: { fish: { n: 'Рыбка', e: 50, p: 10, c: '#6fb7e0' }, sausage: { n: 'Сосиска', e: 100, p: 20, c: '#d97a5a' }, milk: { n: 'Молоко', e: 30, p: 6, c: '#f4f4f4' }, shrimp: { n: 'Креветка', e: 150, p: 30, c: '#f49a7a' }, chicken: { n: 'Курочка', e: 120, p: 24, c: '#e8b37a' }, cream: { n: 'Сметана', e: 40, p: 8, c: '#fff8e6' } },
+  cat: { fish: { n: 'Рыбка', e: 50, p: 10, c: '#6fb7e0' }, sausage: { n: 'Сосиска', e: 100, p: 20, c: '#d97a5a' }, milk: { n: 'Молоко', e: 30, p: 6, c: '#f4f4f4' }, shrimp: { n: 'Креветка', e: 150, p: 30, c: '#f49a7a' }, chicken: { n: 'Курочка', e: 120, p: 24, c: '#e8b37a' }, cream: { n: 'Сметана', e: 40, p: 8, c: '#fff8e6' }, water: { n: 'Водичка', e: 20, p: 4, c: '#7fd8ff' }, meat: { n: 'Мясо', e: 130, p: 26, c: '#c0392b' }, tuna: { n: 'Тунец', e: 110, p: 22, c: '#7a8aa0' }, yogurt: { n: 'Йогурт', e: 45, p: 9, c: '#ffd9e6' } },
   boy: { pizza: { n: 'Пицца', e: 100, p: 20, c: '#f2b84b' }, banana: { n: 'Банан', e: 50, p: 10, c: '#f7e15a' }, icecream: { n: 'Мороженое', e: 80, p: 15, c: '#f6c6dd' }, sandwich: { n: 'Бутерброд', e: 120, p: 25, c: '#e3b06a' }, apple: { n: 'Яблоко', e: 40, p: 8, c: '#e74c3c' }, pear: { n: 'Груша', e: 45, p: 9, c: '#b7d86b' }, melon: { n: 'Арбуз', e: 90, p: 18, c: '#2ecc71' }, berry: { n: 'Клубника', e: 60, p: 12, c: '#ff4d6d' }, orange: { n: 'Апельсин', e: 50, p: 10, c: '#ff9f1c' } },
 };
 const MAX_ENERGY = 500, LEVEL_COST = 100;
@@ -178,7 +178,7 @@ const OUT = {
   string: [{ n: 'Синяя', p: 0 }, { n: 'Зелёная', p: 10 }, { n: 'Красная', p: 10 }, { n: 'Чёрная', p: 10 }],
 };
 const HAIR = ['#55341a', '#8c6238', '#c9973a'], STRING = ['#2558c9', '#2f9d4b', '#d62e3a', '#222'];
-const SKIN = '#f1c9a5', LIPS = '#e87a93';
+let SKIN = '#f1c9a5'; const LIPS = '#e87a93'; // SKIN меняется на цвет шерсти, когда рисуем Ника-футболиста
 
 const KITS = [
   { n: 'Классика: 5 широких', stripes: 5, ratio: 0.5 },
@@ -252,6 +252,7 @@ function crest(x, y, k) { // маленькая эмблема Барселон�
   ctx.restore(); ctx.strokeStyle = '#3b1d0a'; ctx.lineWidth = 0.6; ctx.stroke();
   ctx.restore();
 }
+let KIT_NAME = 'LEON', KIT_NUM = '17'; // имя и номер на форме — у Ника свои
 function jersey(x, y, w, h, kind, back) { // футболка Барсы
   ctx.save(); jerseyPath(x, y, w, h); ctx.clip();
   const L = x - w / 2 - w * 0.26, R = x + w / 2 + w * 0.26;
@@ -265,11 +266,11 @@ function jersey(x, y, w, h, kind, back) { // футболка Барсы
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(x - w, y + h * 0.78, w * 2, h);
   ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - w * 0.3, y + h * 0.45); ctx.quadraticCurveTo(x - w * 0.2, y + h * 0.7, x - w * 0.35, y + h); ctx.moveTo(x + w * 0.3, y + h * 0.5); ctx.quadraticCurveTo(x + w * 0.2, y + h * 0.75, x + w * 0.35, y + h); ctx.stroke(); // складки
   ctx.restore();
-  if (!back) { sponsorCircle(x, y + h * 0.62, w / 36 * 1.1); crest(x - w * 0.26, y + h * 0.32, w / 36 * 1.35); ctx.fillStyle = '#edbb00'; ctx.textAlign = 'center'; ctx.font = `bold ${w * 0.2}px Arial`; ctx.fillText('17', x + w * 0.27, y + h * 0.4); }
+  if (!back) { sponsorCircle(x, y + h * 0.62, w / 36 * 1.1); crest(x - w * 0.26, y + h * 0.32, w / 36 * 1.35); ctx.fillStyle = '#edbb00'; ctx.textAlign = 'center'; ctx.font = `bold ${w * 0.2}px Arial`; ctx.fillText(KIT_NUM, x + w * 0.27, y + h * 0.4); }
   if (back) {
     ctx.fillStyle = '#edbb00'; ctx.textAlign = 'center';
-    ctx.font = `bold ${Math.max(7, w * 0.2)}px Arial`; ctx.fillText('LEON', x, y + h * 0.32);
-    ctx.font = `bold ${w * 0.36}px Arial`; ctx.fillText('17', x, y + h * 0.8); // номер жёлтый в середине спины
+    ctx.font = `bold ${Math.max(7, w * 0.2)}px Arial`; ctx.fillText(KIT_NAME, x, y + h * 0.32);
+    ctx.font = `bold ${w * 0.36}px Arial`; ctx.fillText(KIT_NUM, x, y + h * 0.8); // номер жёлтый в середине спины
   }
 }
 function rr(x, y, w, h, r) { ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -391,7 +392,7 @@ const LOOKS = [
   { n: 'Кожа чуть загорелая', hair: '#b58c55', fringe: 'bowl', eyes: '#6e8fae', skin: '#ecc5a2' },
   { n: 'Взъерошенный', hair: '#b58c55', fringe: 'messy', eyes: '#6e8fae', skin: '#f3d6bc' }];
 function drawBoy(x, y, s, o = {}) {
-  const LK = LOOKS[o.look === undefined ? (S.look || 0) : o.look];
+  const LK = o.lookObj || LOOKS[o.look === undefined ? (S.look || 0) : o.look];
   const f = o.outfit || S.outfit, back = !!o.back, mouth = o.mouth || 0, legT = o.legT || 0, SKIN = LK.skin;
   if (!o.headOnly) { ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(x, y + 46 * s, 20 * s, 5 * s, 0, 0, 7); ctx.fill(); }
   ctx.save(); ctx.translate(x, y); ctx.scale(o.flip ? -s : s, s);
@@ -410,7 +411,7 @@ function drawBoy(x, y, s, o = {}) {
   if (f.shorts === 0) { ctx.save(); shortsPath(); ctx.clip(); ctx.fillStyle = '#a50044'; for (let sx = -14; sx < 18; sx += 5.5) ctx.fillRect(sx, 4, 2.4, 18); ctx.restore(); } // гранатовые полоски как на футболке
   ctx.save(); ctx.beginPath(); ctx.moveTo(-16, 4); ctx.lineTo(16, 4); ctx.lineTo(18, 19); ctx.quadraticCurveTo(12, 21, 3, 20); ctx.lineTo(0, 15); ctx.lineTo(-3, 20); ctx.quadraticCurveTo(-12, 21, -18, 19); ctx.closePath(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(-18, 15, 36, 8); const gq = ctx.createLinearGradient(-18, 0, 18, 0); gq.addColorStop(0, 'rgba(0,0,0,0.3)'); gq.addColorStop(0.5, 'rgba(255,255,255,0.12)'); gq.addColorStop(1, 'rgba(0,0,0,0.3)'); ctx.fillStyle = gq; ctx.fillRect(-18, 4, 36, 18); ctx.restore();
   ctx.fillStyle = f.shorts === 1 ? '#004d98' : '#ffffff88'; ctx.fillRect(-16, 4, 32, 2.2); // пояс
-  if (!back) { ctx.fillStyle = '#edbb00'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.fillText('17', -8, 17); }
+  if (!back) { ctx.fillStyle = '#edbb00'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'center'; ctx.fillText(KIT_NUM, -8, 17); }
   jersey(0, -26, 36, 32, f.shirt, back);
   // руки — качаются в противофазе ногам
   for (const side of [-1, 1]) {
@@ -421,6 +422,7 @@ function drawBoy(x, y, s, o = {}) {
     ctx.strokeStyle = STRING[f.string]; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(-4, -31); ctx.quadraticCurveTo(-6, -22, 0, -19); ctx.quadraticCurveTo(6, -22, 4, -31); ctx.stroke(); // ниточка с шеи
     ctx.fillStyle = '#f2c43a'; ctx.fillRect(-0.9, -19, 1.8, 7); ctx.fillRect(-3, -17, 6, 1.6);
   }
+  if (o.noHead) { ctx.restore(); return; } // тело без головы — для Ника-футболиста
   const hair = LK.hair || HAIR[f.hair];
   ctx.fillStyle = SKIN; ctx.beginPath(); rr(-4, -33, 8, 8, 2); ctx.fill(); // короткая шея
   ctx.save(); ctx.translate(0, -2.5);
@@ -646,14 +648,16 @@ function energyBar(x, y, w, who, label) {
 
 // ───────────────────────── ввод ─────────────────────────
 const keys = {}, pointer = { x: 0, y: 0, down: false, id: null };
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else if (screen === 'match') matchShoot(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { e.preventDefault(); if (screen === 'football') footballTap(); else if (screen === 'match') matchShoot(); else if (screen === 'juggle') juggleTap(); else action(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyQ') shieldAction(); if (screen === 'game' && (e.code === 'KeyE' || e.code === 'Enter')) dash(); if (screen === 'game' && e.code === 'Escape') toEnd('quit'); });
 addEventListener('keyup', e => keys[e.code] = false);
 const joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t0: 0, R: 78, get hx() { return W - 135; }, hy: 0 }; // крупный джойстик в правом нижнем углу // hx/hy — место постоянного джойстика // виртуальный джойстик: появляется там, где палец коснулся поля
 function toCanvas(e) { if (ROT) return { x: e.clientY * W / innerHeight, y: (innerWidth - e.clientX) * H / innerWidth }; return { x: e.clientX * W / innerWidth, y: e.clientY * H / innerHeight }; }
 cv.addEventListener('pointerdown', e => {
   ac(); const p = toCanvas(e);
   if (TOUCH && !window.__lockTried) { window.__lockTried = true; try { const so = window.screen.orientation; if (so && so.lock) so.lock('landscape').catch(() => {}); } catch (_) {} }
+  if (screen === 'fmenu') { }
   if (screen === 'football' && !hitBtn(p.x, p.y)) { if (F && !F.youShoot && (F.phase === 'wait' || F.phase === 'fly') && joy.id === null && TOUCH) { joy.id = e.pointerId; joy.bx = joy.x = p.x; joy.by = joy.y = p.y; joy.t0 = performance.now(); F.keeperTgt = clamp(p.x, GOAL().x1 + 20, GOAL().x2 - 20); return; } footballTap(p); return; }
+  if (screen === 'juggle' && J && !hitBtn(p.x, p.y)) { if (J.over) { startJuggle(); return; } if (joy.id === null) { joy.id = e.pointerId; joy.hy = H - 120; const fixed = Math.hypot(p.x - joy.hx, p.y - joy.hy) < 120; joy.bx = fixed ? joy.hx : p.x; joy.by = fixed ? joy.hy : p.y; joy.x = p.x; joy.y = p.y; joy.t0 = performance.now(); return; } }
   if (screen === 'match' && M && !hitBtn(p.x, p.y)) { if (M.over) { startMatch(); return; } if (joy.id === null) { joy.id = e.pointerId; joy.hy = H - 120; const fixed = Math.hypot(p.x - joy.hx, p.y - joy.hy) < 120; joy.bx = fixed ? joy.hx : p.x; joy.by = fixed ? joy.hy : p.y; joy.x = p.x; joy.y = p.y; joy.t0 = performance.now(); return; } }
   if (screen === 'game' && G && !G.result && !hitBtn(p.x, p.y) && joy.id === null) { joy.id = e.pointerId; joy.hy = H - 120; const fixed = Math.hypot(p.x - joy.hx, p.y - joy.hy) < 120; joy.bx = fixed ? joy.hx : p.x; joy.by = fixed ? joy.hy : p.y; joy.x = p.x; joy.y = p.y; joy.t0 = performance.now(); try { cv.setPointerCapture(e.pointerId); } catch (_) {} return; } // палец на поле — джойстик
   pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.id = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (_) {}
@@ -677,14 +681,14 @@ cv.addEventListener('wheel', e => { if (screen === 'map') { mapScroll += e.delta
 cv.addEventListener('pointercancel', e => { if (e.pointerId === joy.id) { joy.id = null; return; } pointer.down = false; pointer.id = null; pointer.btn = null; });
 
 // ───────────────────────── футбол: пенальти Леон против Ника ─────────────────────────
-const BALLS = ['Как на фото', 'Барса', 'Огонь', 'Лёд', 'Золото', 'Арбуз', 'Пляж', 'Космос', 'Неон', 'Триколор'];
+const BALLS = ['Барса', 'Барса', 'Огонь', 'Лёд', 'Золото', 'Арбуз', 'Пляж', 'Космос', 'Неон', 'Триколор'];
 function drawBall(x, y, r, k, rot = 0) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
   ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(2, r * 0.9, r * 0.9, r * 0.35, 0, 0, 7); ctx.fill();
   const base = ['#fff', '#1d3f8f', '#ff6a1f', '#bfe9ff', '#ffd700', '#2ecc71', '#fff', '#1a1040', '#0b0b12', '#fff'][k];
   ctx.fillStyle = base; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
   ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
-  if (k === 0) { ctx.fillStyle = '#1b7f86'; ctx.beginPath(); ctx.moveTo(-r, -r * 0.2); ctx.quadraticCurveTo(-r * 0.2, -r * 1.1, r * 0.9, -r * 0.5); ctx.lineTo(r, -r * 0.1); ctx.quadraticCurveTo(-r * 0.1, -r * 0.6, -r, r * 0.25); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(r * 0.55, -r); ctx.quadraticCurveTo(r * 1.1, 0, r * 0.55, r); ctx.lineTo(r, r); ctx.lineTo(r, -r); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#1b7f86'; ctx.lineWidth = r * 0.06; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-r, r * (0.35 + i * 0.15)); ctx.lineTo(-r * 0.25, r * (0.35 + i * 0.15)); ctx.stroke(); } sponsorCircle(-r * 0.1, -r * 0.72, r / 22, 0); crest(0, r * 0.12, r / 26); }
+  if (k === 0) { ctx.fillStyle = '#a3193a'; ctx.fillRect(-r, -r, r, 2 * r); ctx.fillStyle = '#1d3f8f'; ctx.fillRect(0, -r, r, 2 * r); ctx.fillStyle = '#ffffff22'; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.5, 0, 7); ctx.fill(); crest(0, r * 0.1, r / 13); }
   if (k === 1) { ctx.fillStyle = '#a3193a'; for (let i = -2; i <= 2; i++) ctx.fillRect(i * r * 0.5 - r * 0.12, -r, r * 0.25, r * 2); ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(0, 0, r * 0.22, 0, 7); ctx.fill(); }
   if (k === 2) { ctx.fillStyle = '#ffd34d'; for (let i = 0; i < 6; i++) { const a = i * 1.047; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(Math.cos(a) * r, Math.sin(a) * r * 0.3, Math.cos(a + 0.5) * r * 1.1, Math.sin(a + 0.5) * r * 1.1); ctx.quadraticCurveTo(Math.cos(a + 0.3) * r * 0.5, Math.sin(a + 0.3) * r * 0.5, 0, 0); ctx.fill(); } ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(0, 0, r * 0.25, 0, 7); ctx.fill(); }
   if (k === 3) { ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.12; for (let i = 0; i < 3; i++) { const a = i * 1.047; ctx.beginPath(); ctx.moveTo(-Math.cos(a) * r, -Math.sin(a) * r); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); } ctx.fillStyle = '#ffffffaa'; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.22, 0, 7); ctx.fill(); }
@@ -700,7 +704,8 @@ function drawBall(x, y, r, k, rot = 0) {
 const VERSION = 'версия 01.11 · матч · 76 миров'; // метка, чтобы видеть, что страница обновилась
 let F = null;
 const GOAL = () => ({ x1: W / 2 - 130, x2: W / 2 + 130, y: 118, top: 58 });
-function startFootball() { F = { round: 1, you: 0, them: 0, youShoot: true, phase: 'aim', t: 0, aim: 0, aimDir: 1, ball: { x: W / 2, y: H - 170, vx: 0, vy: 0, rot: 0 }, keeperX: W / 2, keeperTgt: W / 2, dive: 0, msg: '', spin: 0 }; screen = 'football'; }
+const penMode = () => S.penMode || 'alt'; // 'alt' — по очереди, 'shoot' — только бью, 'keep' — только стою в воротах
+function startFootball() { joy.id = null; F = { round: 1, you: 0, them: 0, youShoot: penMode() !== 'keep', phase: 'aim', t: 0, aim: 0, aimDir: 1, ball: { x: W / 2, y: H - 170, vx: 0, vy: 0, rot: 0 }, keeperX: W / 2, keeperTgt: W / 2, dive: 0, msg: '', spin: 0 }; screen = 'football'; }
 function footballTap(p) { // тап: в фазе прицела — удар; когда ты вратарь — прыжок к месту тапа
   if (!F) return; if (F.phase === 'aim' && F.youShoot) footballKick(); else if (F.phase === 'wait' && !F.youShoot && p) F.keeperTgt = clamp(p.x, GOAL().x1 + 20, GOAL().x2 - 20); else if (F.phase === 'over') startFootball();
 }
@@ -713,7 +718,7 @@ function updateFootball(dt) {
   else if (F.phase === 'wait') { if (!F.youShoot) { if (keys.ArrowLeft || keys.KeyA) F.keeperTgt -= 380 * dt; if (keys.ArrowRight || keys.KeyD) F.keeperTgt += 380 * dt; if (joy.id !== null) F.keeperTgt += (joy.x - joy.bx) / joy.R * 380 * dt; F.keeperTgt = clamp(F.keeperTgt, g.x1 + 20, g.x2 - 20); if (F.t > 1.6) footballKick(); } }
   else if (F.phase === 'fly') { b.x += b.vx * dt; b.y += b.vy * dt; b.rot += dt * 12; if (!F.youShoot) { if (keys.ArrowLeft || keys.KeyA) F.keeperTgt -= 380 * dt; if (keys.ArrowRight || keys.KeyD) F.keeperTgt += 380 * dt; if (joy.id !== null) F.keeperTgt += (joy.x - joy.bx) / joy.R * 380 * dt; F.keeperTgt = clamp(F.keeperTgt, g.x1 + 20, g.x2 - 20); }
     if (b.y <= g.y) { const inGoal = b.x > g.x1 + 8 && b.x < g.x2 - 8, saved = Math.abs(b.x - F.keeperX) < 44; if (!inGoal) { F.msg = F.youShoot ? 'Мимо ворот!' : 'Мимо — повезло'; F.phase = 'result'; F.t = 0; SFX.hit(); } else footballResult(!saved); if (!inGoal || saved) { b.vx = (Math.random() - 0.5) * 200; b.vy = 160; } else { b.vy = 120; b.vx *= 0.2; } } }
-  else if (F.phase === 'result') { b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.96; b.vy *= 0.96; if (F.t > 1.6) { if (!F.youShoot) F.round++; F.youShoot = !F.youShoot; if (F.round > 5) { F.phase = 'over'; F.msg = F.you > F.them ? 'ПОБЕДА! 🏆' : F.you < F.them ? 'Проиграли… ещё раз?' : 'Ничья!'; } else { F.phase = 'aim'; F.t = 0; b.x = W / 2; b.y = H - 170; b.vx = b.vy = 0; F.keeperTgt = W / 2; F.aim = -1; F.aimDir = 1; } } }
+  else if (F.phase === 'result') { b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.96; b.vy *= 0.96; if (F.t > 1.6) { if (penMode() === 'alt') { if (!F.youShoot) F.round++; F.youShoot = !F.youShoot; } else F.round++; if (F.round > 5) { F.phase = 'over'; F.msg = F.you > F.them ? 'ПОБЕДА! 🏆' : F.you < F.them ? 'Проиграли… ещё раз?' : 'Ничья!'; } else { F.phase = 'aim'; F.t = 0; b.x = W / 2; b.y = H - 170; b.vx = b.vy = 0; F.keeperTgt = W / 2; F.aim = -1; F.aimDir = 1; } } }
   F.keeperX += clamp(F.keeperTgt - F.keeperX, -(F.phase === 'fly' || F.phase === 'wait' ? 520 : 300) * dt, (F.phase === 'fly' || F.phase === 'wait' ? 520 : 300) * dt);
 }
 function drawCatKit(x, y, sc, legT, flip) { // Ник в форме Барсы: сзади NICK и 17
@@ -726,68 +731,119 @@ function drawFootball() {
   ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 4; ctx.strokeRect(W / 2 - 300, g.y, 600, H - g.y - 60); ctx.strokeRect(W / 2 - 180, g.y, 360, 140); ctx.beginPath(); ctx.arc(W / 2, H - 170, 8, 0, 7); ctx.stroke();
   // ворота с сеткой
   ctx.fillStyle = '#ffffff33'; ctx.fillRect(g.x1, g.top, g.x2 - g.x1, g.y - g.top); ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1; for (let x = g.x1; x <= g.x2; x += 16) { ctx.beginPath(); ctx.moveTo(x, g.top); ctx.lineTo(x, g.y); ctx.stroke(); } for (let y = g.top; y <= g.y; y += 16) { ctx.beginPath(); ctx.moveTo(g.x1, y); ctx.lineTo(g.x2, y); ctx.stroke(); }
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(g.x1, g.y); ctx.lineTo(g.x1, g.top); ctx.lineTo(g.x2, g.top); ctx.lineTo(g.x2, g.y); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(g.x1, g.top, g.x2 - g.x1, g.y - g.top); ctx.strokeStyle = '#fff'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(g.x1, g.y); ctx.lineTo(g.x1, g.top); ctx.lineTo(g.x2, g.top); ctx.lineTo(g.x2, g.y); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W / 2, H - 170, 5, 0, 7); ctx.fill();
   // вратарь и бьющий: когда ты бьёшь — Леон бьёт, Ник в воротах; потом наоборот
-  const keeperIsCat = F.youShoot, kx = F.keeperX, ky = g.y + 10, lean = clamp((F.keeperTgt - F.keeperX) / 60, -1, 1);
-  if (keeperIsCat) drawCatKit(kx, ky + 6, 1.1, t * 6, lean < 0); else drawBoy(kx, ky + 22, 1.25, { legT: t * 6, mouth: 0.2, blink: Math.floor(t * 2) % 7 === 0 });
-  if (F.phase !== 'over') { const sx = W / 2 + (F.phase === 'aim' || F.phase === 'wait' ? -40 : -70), sy = H - 150; if (F.youShoot) drawBoy(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? 6 : 0, mouth: 0.4, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatKit(sx, sy, 1.2, F.phase === 'fly' ? t * 10 : 0, false); }
-  drawBall(b.x, b.y, 17, S.ball || 0, b.rot);
+  const me = footMe(), shooterIsBoy = F.youShoot ? me === 'boy' : me === 'cat', keeperIsCat = shooterIsBoy, kx = F.keeperX, ky = g.y + 10, lean = clamp((F.keeperTgt - F.keeperX) / 60, -1, 1), moving = Math.abs(F.keeperTgt - F.keeperX) > 8;
+  if (keeperIsCat) drawCatStanding(kx, ky + 26, 1.2, { legT: moving ? t * 10 : 0, flip: lean < 0, gloves: true, mood: moving ? 'shock' : 'happy' }); else drawBoy(kx, ky + 22, 1.25, { legT: moving ? t * 10 : 0, flip: lean < 0, mouth: 0.2, blink: Math.floor(t * 2) % 7 === 0 });
+  if (F.phase !== 'over') { const sx = W / 2 + (F.phase === 'aim' || F.phase === 'wait' ? -40 : -70), sy = H - 150; if (shooterIsBoy) drawBoy(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? 6 : 0, mouth: 0.4, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatStanding(sx, sy + 20, 1.35, { legT: F.phase === 'fly' ? t * 10 : 0 }); }
+  drawBall(b.x, b.y, 20, S.ball || 0, b.rot);
   if (F.phase === 'aim' && F.youShoot) { const ax = g.x1 - 25 + (F.aim + 1) / 2 * (g.x2 - g.x1 + 50); ctx.strokeStyle = '#ffe600'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ax, g.y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = ax > g.x1 + 8 && ax < g.x2 - 8 ? '#ffe600' : '#ff4d6d'; ctx.beginPath(); ctx.arc(ax, g.y, 10, 0, 7); ctx.fill(); }
   // табло и подсказки
-  panel(W / 2 - 170, 6, 340, 42); text(`Леон ${F.you} : ${F.them} Ник   ·   удар ${Math.min(5, F.round)} из 5`, W / 2, 34, 20, '#ffe08a');
+  panel(W / 2 - 170, 6, 340, 42); text(`${footMe() === 'boy' ? 'Леон' : 'Ник'} ${F.you} : ${F.them} ${footMe() === 'boy' ? 'Ник' : 'Леон'}   ·   удар ${Math.min(5, F.round)} из 5`, W / 2, 34, 20, '#ffe08a');
   const hint = F.phase === 'over' ? F.msg + '  — тап: ещё раз' : F.phase === 'result' ? F.msg : F.youShoot ? (TOUCH ? 'Ты бьёшь: тап, когда метка там, куда хочешь' : 'Ты бьёшь: пробел, когда метка там, куда хочешь') : (TOUCH ? 'Ты в воротах: тапни, куда прыгнуть' : 'Ты в воротах: стрелки влево-вправо');
   text(hint, W / 2, H - 28, 20, F.phase === 'result' || F.phase === 'over' ? '#fff' : '#ffe08a');
-  btn(W - 150, 56, 136, 34, 'Меню', () => { screen = 'menu'; F = null; }, '#555', true);
-  btn(14, 56, 170, 34, 'Мяч: ' + BALLS[S.ball || 0], () => { S.ball = ((S.ball || 0) + 1) % BALLS.length; save(); }, '#3b82f6', true);
+  btn(W - 150, 56, 136, 34, 'Меню', () => { screen = 'fmenu'; F = null; }, '#555', true);
 }
 
 // ───────────────────────── футбол: матч 1 на 1 ─────────────────────────
 let M = null;
-const MG = () => ({ top: H / 2 - 75, bot: H / 2 + 75, depth: 34, fy: 70 }); // ворота слева и справа, поле от fy до H-30
-function startMatch() { M = { t: 120, you: 0, them: 0, ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, rot: 0 }, leon: { x: W * 0.3, y: H / 2, legT: 0, flip: false }, nick: { x: W * 0.7, y: H / 2, legT: 0, flip: true, kickCd: 0, dive: 0, keeper: false }, pauseT: 1.2, msg: 'Ник разводит!', kickoff: 'nick', over: false }; screen = 'match'; matchReset('nick'); }
-function matchReset(who) { const b = M.ball; b.vx = b.vy = 0; b.y = H / 2; b.x = W / 2 + (who === 'nick' ? 40 : -40); M.leon.x = W * 0.3; M.leon.y = H / 2; M.nick.x = W * 0.7; M.nick.y = H / 2; M.pauseT = 1.2; M.kickoff = who; M.msg = who === 'nick' ? 'Ник разводит!' : 'Леон разводит!'; }
-function matchShoot() { if (!M || M.over) { if (M && M.over) startMatch(); return; } const b = M.ball, L = M.leon, d = dist(L, b); if (d < 70) { const g = MG(), ty = clamp(b.y, g.top + 20, g.bot - 20), dx = W - b.x, dy = ty - b.y, dd = Math.hypot(dx, dy) || 1; b.vx = dx / dd * 560; b.vy = dy / dd * 560; SFX.shot(); say('УДАР!', L.x, L.y - 70, '#ffe600', 0.6); } }
+const footMe = () => S.footMe || 'boy'; // за кого играешь: 'boy' — Леон, 'cat' — Ник
+const MG = () => ({ top: H / 2 - 80, bot: H / 2 + 80, depth: 40, fy: 70, bottom: H - 30 });
+function startMatch() { M = { t: 120, you: 0, them: 0, ball: { x: W / 2, y: H / 2, vx: 0, vy: 0, rot: 0 }, L: { x: W * 0.3, y: H / 2, legT: 0, flip: false, kickCd: 0, dive: 0, keeper: false, who: 'boy' }, R: { x: W * 0.7, y: H / 2, legT: 0, flip: true, kickCd: 0, dive: 0, keeper: false, who: 'cat' }, pauseT: 1.2, msg: '', over: false }; screen = 'match'; matchReset('cat'); }
+function matchReset(who) { const b = M.ball; b.vx = b.vy = 0; b.y = H / 2; b.x = W / 2 + (who === 'cat' ? 40 : -40); M.L.x = W * 0.3; M.L.y = H / 2; M.R.x = W * 0.7; M.R.y = H / 2; M.pauseT = 1.2; M.msg = who === 'cat' ? 'Ник разводит!' : 'Леон разводит!'; }
+function mePlayer() { return footMe() === 'boy' ? M.L : M.R; }
+function matchShoot() { if (!M) return; if (M.over) { startMatch(); return; } const b = M.ball, P = mePlayer(), g = MG(); if (dist(P, b) < 80) { const gx = P === M.L ? W : 0, ty = clamp(b.y, g.top + 25, g.bot - 25), dx = gx - b.x, dy = ty - b.y, dd = Math.hypot(dx, dy) || 1; b.vx = dx / dd * 640; b.vy = dy / dd * 640; SFX.shot(); say('УДАР!', P.x, P.y - 70, '#ffe600', 0.6); } }
 function updateMatch(dt) {
-  const g = MG(), b = M.ball, L = M.leon, N = M.nick; if (M.over) return;
+  const g = MG(), b = M.ball; if (M.over) return;
   if (M.pauseT > 0) { M.pauseT -= dt; return; }
-  M.t -= dt; if (M.t <= 0) { M.over = true; M.msg = M.you > M.them ? 'ПОБЕДА ЛЕОНА! 🏆' : M.you < M.them ? 'Победил Ник 🐱' : 'Ничья!'; SFX.win(); return; }
-  // Леон — ты
+  M.t -= dt; if (M.t <= 0) { M.over = true; M.msg = M.you > M.them ? 'ПОБЕДА! 🏆' : M.you < M.them ? 'Проигрыш… ещё раз?' : 'Ничья!'; SFX.win(); return; }
+  const P = mePlayer(), A = P === M.L ? M.R : M.L, pGoalX = P === M.L ? W : 0, aGoalX = A === M.L ? W : 0;
+  // ты
   let dx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0), dy = (keys.ArrowDown || keys.KeyS ? 1 : 0) - (keys.ArrowUp || keys.KeyW ? 1 : 0);
   if (joy.id !== null) { const px = joy.x - joy.bx, py = joy.y - joy.by, d = Math.hypot(px, py); if (d > 6) { const k = Math.min(1, d / 40); dx = px / d * k; dy = py / d * k; } }
   const dl = Math.hypot(dx, dy); if (dl > 1) { dx /= dl; dy /= dl; }
-  L.x += dx * 270 * dt; L.y += dy * 270 * dt; if (dl > 0.1) { L.legT += dt * 14; if (Math.abs(dx) > 0.2) L.flip = dx < 0; }
-  L.x = clamp(L.x, 40, W - 40); L.y = clamp(L.y, g.fy + 30, H - 50);
-  // Ник — соперник: бежит к мячу, бьёт в левые ворота; если мяч летит в его ворота — встаёт вратарём
-  N.kickCd = Math.max(0, N.kickCd - dt); N.dive = Math.max(0, (N.dive || 0) - dt);
-  N.keeper = b.vx > 60 && b.x > W * 0.55; // мяч летит к его воротам — Ник встаёт в ворота как вратарь
-  const tgt = N.keeper ? { x: W - 48, y: clamp(b.y + b.vy * 0.25, g.top + 20, g.bot - 20) } : { x: b.x + (b.x > N.x ? -20 : 20), y: b.y };
-  if (N.keeper && Math.abs(b.x - N.x) < 90 && N.dive <= 0 && Math.abs(b.y - N.y) > 25) N.dive = 0.6; const nd = dist(N, tgt) || 1; const ns = N.keeper ? 420 : 235 * (b.x > W / 2 ? 1 : 1.15);
-  N.x += (tgt.x - N.x) / nd * ns * dt; N.y += (tgt.y - N.y) / nd * ns * dt; N.legT += dt * 12; N.flip = b.x < N.x; N.x = clamp(N.x, 40, W - 40); N.y = clamp(N.y, g.fy + 30, H - 50);
-  if (N.keeper && dist(N, b) < 50 && b.vx > 0) { b.vx = -Math.abs(b.vx) * 0.7 - 120; b.vy += (Math.random() - 0.5) * 200; N.kickCd = 0.5; say('СЕЙВ! 🧤', b.x, b.y - 40, '#fff', 1); SFX.task(); }
-  else if (dist(N, b) < 44 && N.kickCd <= 0) { const ty = g.top + 25 + Math.random() * (g.bot - g.top - 50), kx = 0 - b.x, ky = ty - b.y, kd = Math.hypot(kx, ky) || 1, pw = b.x < W / 2 ? 520 : 380; b.vx = kx / kd * pw + (Math.random() - 0.5) * 80; b.vy = ky / kd * pw + (Math.random() - 0.5) * 80; N.kickCd = 0.6; SFX.meow(); }
-  // Леон ведёт мяч телом: мяч отлетает по направлению от него
-  if (dist(L, b) < 40) { const ax = b.x - L.x, ay = b.y - L.y, ad = Math.hypot(ax, ay) || 1; b.vx = ax / ad * 300 + dx * 120; b.vy = ay / ad * 300 + dy * 120; }
-  b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vx * dt / 17; const fr = Math.max(0, 1 - 1.3 * dt); b.vx *= fr; b.vy *= fr;
-  if (b.y < g.fy + 14) { b.y = g.fy + 14; b.vy = Math.abs(b.vy) * 0.8; } if (b.y > H - 44) { b.y = H - 44; b.vy = -Math.abs(b.vy) * 0.8; }
+  P.x += dx * 300 * dt; P.y += dy * 300 * dt; if (dl > 0.1) { P.legT += dt * 14; if (Math.abs(dx) > 0.2) P.flip = dx < 0; }
+  P.x = clamp(P.x, 40, W - 40); P.y = clamp(P.y, g.fy + 30, H - 50); P.keeper = false;
+  if (dist(P, b) < 42) { const ax = b.x - P.x, ay = b.y - P.y, ad = Math.hypot(ax, ay) || 1; b.vx = ax / ad * 280 + dx * 140; b.vy = ay / ad * 280 + dy * 140; }
+  // соперник (компьютер): медленнее тебя, бьёт реже и неточно; когда мяч летит в его ворота — встаёт вратарём
+  A.kickCd = Math.max(0, A.kickCd - dt); A.dive = Math.max(0, A.dive - dt);
+  const towardA = aGoalX === 0 ? b.vx < -60 && b.x < W * 0.45 : b.vx > 60 && b.x > W * 0.55; A.keeper = towardA;
+  const tgt = A.keeper ? { x: aGoalX === 0 ? 50 : W - 50, y: clamp(b.y + b.vy * 0.2, g.top + 22, g.bot - 22) } : { x: b.x + (aGoalX === 0 ? 18 : -18), y: b.y };
+  const nd = dist(A, tgt) || 1, ns = A.keeper ? 320 : 175; A.x += (tgt.x - A.x) / nd * Math.min(ns * dt, nd); A.y += (tgt.y - A.y) / nd * Math.min(ns * dt, nd); A.legT += dt * 12; A.flip = b.x < A.x; A.x = clamp(A.x, 40, W - 40); A.y = clamp(A.y, g.fy + 30, H - 50);
+  if (A.keeper && Math.abs(b.x - A.x) < 90 && A.dive <= 0 && Math.abs(b.y - A.y) > 20) A.dive = 0.6;
+  if (A.keeper && dist(A, b) < 46 && ((aGoalX === 0 && b.vx < 0) || (aGoalX === W && b.vx > 0)) && Math.random() < 0.7) { b.vx = (aGoalX === 0 ? 1 : -1) * (Math.abs(b.vx) * 0.6 + 120); b.vy += (Math.random() - 0.5) * 220; A.kickCd = 0.6; say('СЕЙВ! 🧤', b.x, b.y - 40, '#fff', 1); SFX.task(); }
+  else if (dist(A, b) < 44 && A.kickCd <= 0) { const ty = g.top + 30 + Math.random() * (g.bot - g.top - 60), kx = pGoalX === W ? 0 - b.x : W - b.x, ky = ty - b.y, kd = Math.hypot(kx, ky) || 1, pw = 360; b.vx = kx / kd * pw + (Math.random() - 0.5) * 160; b.vy = ky / kd * pw + (Math.random() - 0.5) * 160; A.kickCd = 1.4; if (A.who === 'cat') SFX.meow(); }
+  b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vx * dt / 20; const fr = Math.max(0, 1 - 1.3 * dt); b.vx *= fr; b.vy *= fr;
+  if (b.y < g.fy + 22) { b.y = g.fy + 22; b.vy = Math.abs(b.vy) * 0.8; } if (b.y > g.bottom - 22) { b.y = g.bottom - 22; b.vy = -Math.abs(b.vy) * 0.8; }
   const inMouth = b.y > g.top && b.y < g.bot;
-  if (b.x < 14) { if (inMouth) { M.them++; SFX.hit(); say('ГОЛ НИКА!', b.x + 70, b.y - 30, '#ff7043', 1.4); matchReset('leon'); return; } b.x = 14; b.vx = Math.abs(b.vx) * 0.8; }
-  if (b.x > W - 14) { if (inMouth) { M.you++; SFX.win(); say('ГОЛ! 🎉', b.x - 60, b.y - 30, '#7CFC9A', 1.4); matchReset('nick'); return; } b.x = W - 14; b.vx = -Math.abs(b.vx) * 0.8; }
+  const goal = side => { const scorerIsL = side === 'right'; const mine = (scorerIsL && P === M.L) || (!scorerIsL && P === M.R); if (mine) { M.you++; SFX.win(); say('ГОЛ! 🎉', b.x + (side === 'right' ? -70 : 70), b.y - 30, '#7CFC9A', 1.4); } else { M.them++; SFX.hit(); say('ГОЛ СОПЕРНИКА', b.x + (side === 'right' ? -90 : 90), b.y - 30, '#ff7043', 1.4); } matchReset(scorerIsL ? 'cat' : 'boy'); };
+  if (b.x < 22) { if (inMouth) { goal('left'); return; } b.x = 22; b.vx = Math.abs(b.vx) * 0.8; }
+  if (b.x > W - 22) { if (inMouth) { goal('right'); return; } b.x = W - 22; b.vx = -Math.abs(b.vx) * 0.8; }
+}
+function drawPitch(g) { // поле: разметка, штрафные, точки пенальти, дуги, угловые
+  ctx.fillStyle = '#5fa84f'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#6fb85e'; for (let x = 0; x < W; x += 80) ctx.fillRect(x, g.fy, 40, H - g.fy);
+  ctx.strokeStyle = '#ffffffdd'; ctx.lineWidth = 4; ctx.lineCap = 'butt'; ctx.strokeRect(22, g.fy, W - 44, g.bottom - g.fy);
+  ctx.beginPath(); ctx.moveTo(W / 2, g.fy); ctx.lineTo(W / 2, g.bottom); ctx.stroke(); ctx.beginPath(); ctx.arc(W / 2, (g.fy + g.bottom) / 2, 70, 0, 7); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W / 2, (g.fy + g.bottom) / 2, 4, 0, 7); ctx.fill();
+  const ph = 300, pw = 150, cy = (g.fy + g.bottom) / 2;
+  for (const sd of [0, 1]) { const x0 = sd ? W - 22 : 22, dir = sd ? -1 : 1; ctx.strokeRect(Math.min(x0, x0 + dir * pw), cy - ph / 2, pw, ph); ctx.strokeRect(Math.min(x0, x0 + dir * 60), cy - 115, 60, 230); const px = x0 + dir * 100; ctx.beginPath(); ctx.arc(px, cy, 4, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(px, cy, 70, dir > 0 ? -1.0 : Math.PI - 1.0, dir > 0 ? 1.0 : Math.PI + 1.0); ctx.stroke(); }
+  for (const [cx, cy2, a0] of [[22, g.fy, 0], [W - 22, g.fy, Math.PI / 2], [22, g.bottom, -Math.PI / 2], [W - 22, g.bottom, Math.PI]]) { ctx.beginPath(); ctx.arc(cx, cy2, 18, a0, a0 + Math.PI / 2); ctx.stroke(); }
+}
+function drawGoal(g, side) { // ворота: сетка в глубину, толстые белые штанги и перекладина
+  const x0 = side ? W - 22 : 22, dir = side ? 1 : -1, d = g.depth;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(Math.min(x0, x0 + dir * d), g.top, d, g.bot - g.top);
+  ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 1; for (let y = g.top; y <= g.bot; y += 12) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + dir * d, y); ctx.stroke(); } for (let xx = 0; xx <= d; xx += 10) { ctx.beginPath(); ctx.moveTo(x0 + dir * xx, g.top); ctx.lineTo(x0 + dir * xx, g.bot); ctx.stroke(); }
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, g.top); ctx.lineTo(x0 + dir * d, g.top); ctx.lineTo(x0 + dir * d, g.bot); ctx.lineTo(x0, g.bot); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x0, g.top, 7, 0, 7); ctx.arc(x0, g.bot, 7, 0, 7); ctx.fill();
 }
 function drawMatch() {
-  const g = MG(), b = M.ball, L = M.leon, N = M.nick, t = performance.now() / 1000;
-  ctx.fillStyle = '#5fa84f'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#6fb85e'; for (let x = 0; x < W; x += 80) ctx.fillRect(x, g.fy, 40, H - g.fy);
-  ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 4; ctx.strokeRect(14, g.fy, W - 28, H - g.fy - 30); ctx.beginPath(); ctx.moveTo(W / 2, g.fy); ctx.lineTo(W / 2, H - 30); ctx.stroke(); ctx.beginPath(); ctx.arc(W / 2, (g.fy + H - 30) / 2, 70, 0, 7); ctx.stroke();
-  for (const side of [0, 1]) { const x0 = side ? W - 14 : 14, dir = side ? 1 : -1; ctx.fillStyle = '#ffffff33'; ctx.fillRect(Math.min(x0, x0 + dir * g.depth), g.top, g.depth, g.bot - g.top); ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1; for (let y = g.top; y <= g.bot; y += 14) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + dir * g.depth, y); ctx.stroke(); } for (let xx = 0; xx <= g.depth; xx += 11) { ctx.beginPath(); ctx.moveTo(x0 + dir * xx, g.top); ctx.lineTo(x0 + dir * xx, g.bot); ctx.stroke(); } ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, g.top); ctx.lineTo(x0 + dir * g.depth, g.top); ctx.lineTo(x0 + dir * g.depth, g.bot); ctx.lineTo(x0, g.bot); ctx.stroke(); }
-  const ents = [{ y: L.y, d: () => drawBoy(L.x, L.y + 20, 1.25, { flip: L.flip, legT: L.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }) }, { y: N.y, d: () => drawCatStanding(N.x, N.y, 1.25, { legT: N.legT, flip: N.flip, gloves: N.keeper, dive: N.dive > 0, mood: N.dive > 0 ? 'shock' : 'happy' }) }, { y: b.y + 1, d: () => drawBall(b.x, b.y, 15, S.ball || 0, b.rot) }];
+  const g = MG(), b = M.ball, t = performance.now() / 1000; drawPitch(g); drawGoal(g, 0); drawGoal(g, 1);
+  const ents = [M.L, M.R].map(e => ({ y: e.y, d: () => e.who === 'boy' ? drawBoy(e.x, e.y + 20, 1.25, { flip: e.flip, legT: e.legT, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }) : drawCatStanding(e.x, e.y + 20, 1.25, { flip: e.flip, legT: e.legT, gloves: e.keeper, mood: e.dive > 0 ? 'shock' : 'happy' }) }));
+  ents.push({ y: b.y + 1, d: () => drawBall(b.x, b.y, 22, S.ball || 0, b.rot) });
   ents.sort((a, c) => a.y - c.y).forEach(e => e.d());
-  panel(W / 2 - 190, 6, 380, 46); text(`Леон ${M.you} : ${M.them} Ник   ·   ${Math.floor(M.t / 60)}:${String(Math.floor(M.t % 60)).padStart(2, '0')}`, W / 2, 36, 22, '#ffe08a');
-  if (M.pauseT > 0 && !M.over) text(M.msg, W / 2, H / 2 - 100, 30, '#fff');
-  if (M.over) { ctx.fillStyle = '#0008'; ctx.fillRect(0, 0, W, H); text(M.msg, W / 2, H / 2 - 20, 40, '#ffe08a'); text(`Леон ${M.you} : ${M.them} Ник  —  тап: ещё раз`, W / 2, H / 2 + 30, 22, '#fff'); }
+  panel(W / 2 - 190, 6, 380, 46); text(`Леон ${footMe() === 'boy' ? M.you : M.them} : ${footMe() === 'boy' ? M.them : M.you} Ник   ·   ${Math.floor(M.t / 60)}:${String(Math.floor(M.t % 60)).padStart(2, '0')}`, W / 2, 36, 22, '#ffe08a');
+  if (M.pauseT > 0 && !M.over) text(M.msg, W / 2, H / 2 - 110, 30, '#fff');
+  if (M.over) { ctx.fillStyle = '#0008'; ctx.fillRect(0, 0, W, H); text(M.msg, W / 2, H / 2 - 20, 40, '#ffe08a'); text(`${M.you} : ${M.them}  —  тап: ещё раз`, W / 2, H / 2 + 30, 22, '#fff'); }
+  else text(TOUCH ? `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: джойстик — бег, УДАР — по воротам ${footMe() === 'boy' ? 'справа' : 'слева'}` : `Ты — ${footMe() === 'boy' ? 'Леон' : 'Ник'}: стрелки/WASD — бег, пробел — удар по воротам ${footMe() === 'boy' ? 'справа' : 'слева'}`, W / 2, H - 8, 14, '#ffffffcc', 'center', false);
+  btn(W - 150, 58, 136, 34, 'Меню', () => { screen = 'fmenu'; M = null; }, '#555', true);
   if (TOUCH) drawJoy();
-  else text(TOUCH ? 'Веди Леона джойстиком, толкай мяч телом; кнопка УДАР — сильный удар по воротам справа' : 'Стрелки/WASD — бег, пробел — удар по воротам справа', W / 2, H - 8, 14, '#ffffffcc', 'center', false);
-  btn(W - 150, 58, 136, 34, 'Меню', () => { screen = 'menu'; M = null; }, '#555', true);
-  btn(14, 58, 190, 34, 'Форма Ника: ' + NICK_KITS[S.nickKit || 0].n, () => { S.nickKit = ((S.nickKit || 0) + 1) % NICK_KITS.length; save(); }, '#9b59b6', true);
   if (TOUCH && !M.over) { btn(16, H - 110, 120, 70, 'УДАР', () => matchShoot(), '#3b82f6'); buttons[buttons.length - 1].instant = true; }
+}
+// ───────────────────────── чеканка ─────────────────────────
+let J = null;
+function startJuggle() { joy.id = null; J = { x: W / 2, bx: W / 2, by: H - 200, vx: 0, vy: -520, rot: 0, n: 0, best: S.jugBest || 0, over: false, flash: 0, legT: 0 }; screen = 'juggle'; }
+function juggleTap() { if (!J) return; if (J.over) { startJuggle(); return; } const footY = H - 150, near = Math.abs(J.by - footY) < 42 && Math.abs(J.bx - J.x) < 60; if (near && J.vy > -100) { J.vy = -560 - Math.random() * 120; J.vx = (J.bx - J.x) * 2 + (Math.random() - 0.5) * 160; J.n++; J.flash = 0.2; tone('square', 420 + Math.min(J.n, 20) * 20, 300, 0.08, 0.25); say(J.n % 10 === 0 ? J.n + '! 🔥' : String(J.n), J.bx, J.by - 40, '#ffe600', 0.5); if (J.n > J.best) { J.best = J.n; S.jugBest = J.n; save(); } } }
+function updateJuggle(dt) {
+  if (J.over) return; J.flash = Math.max(0, J.flash - dt);
+  let dx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0); if (joy.id !== null) { const px = joy.x - joy.bx; if (Math.abs(px) > 6) dx = clamp(px / 40, -1, 1); }
+  J.x = clamp(J.x + dx * 320 * dt, 60, W - 60); if (Math.abs(dx) > 0.1) J.legT += dt * 14;
+  J.vy += 900 * dt; J.bx += J.vx * dt; J.by += J.vy * dt; J.rot += J.vx * dt / 20; if (J.bx < 30 || J.bx > W - 30) { J.vx = -J.vx; J.bx = clamp(J.bx, 30, W - 30); }
+  if (J.by > H - 120) { J.over = true; SFX.hit(); }
+}
+function drawJuggle() {
+  const me = footMe(), t = performance.now() / 1000; drawPitch(MG());
+  const footY = H - 150; ctx.fillStyle = '#ffffff33'; ctx.beginPath(); ctx.ellipse(J.x, footY, 70, 46, 0, 0, 7); ctx.fill();
+  if (me === 'boy') drawBoy(J.x, H - 130, 1.5, { legT: J.flash > 0 ? 3 : J.legT, mouth: 0.4, blink: Math.floor(t * 2) % 7 === 0 }); else drawCatStanding(J.x, H - 130, 1.5, { legT: J.flash > 0 ? 3 : J.legT });
+  drawBall(J.bx, J.by, 20, S.ball || 0, J.rot);
+  panel(W / 2 - 170, 6, 340, 46); text(`Чеканка: ${J.n}   ·   рекорд ${J.best}`, W / 2, 36, 22, '#ffe08a');
+  if (J.over) { ctx.fillStyle = '#0008'; ctx.fillRect(0, 0, W, H); text('Упал!', W / 2, H / 2 - 30, 40, '#ffe08a'); text(`Набил ${J.n}  ·  рекорд ${J.best}  —  тап: ещё раз`, W / 2, H / 2 + 20, 22, '#fff'); }
+  else text(TOUCH ? 'Двигайся под мяч джойстиком, жми УДАР, когда мяч у ноги' : 'Стрелки — под мяч, пробел — удар, когда мяч у ноги', W / 2, H - 8, 14, '#ffffffcc', 'center', false);
+  btn(W - 150, 58, 136, 34, 'Меню', () => { screen = 'fmenu'; J = null; }, '#555', true);
+  if (TOUCH) { drawJoy(); if (!J.over) { btn(16, H - 110, 120, 70, 'УДАР', () => juggleTap(), '#3b82f6'); buttons[buttons.length - 1].instant = true; } }
+}
+// меню футбола: матч или пенальти, за кого играть
+function drawFootballMenu() {
+  drawPitch(MG()); ctx.fillStyle = '#0005'; ctx.fillRect(0, 0, W, H); panel(W / 2 - 260, 70, 520, 440);
+  text('⚽ Футбол', W / 2, 120, 36, '#ffe08a');
+  text('За кого играешь?', W / 2, 170, 18, '#fff');
+  btn(W / 2 - 220, 190, 210, 50, 'Леон', () => { S.footMe = 'boy'; save(); }, footMe() === 'boy' ? '#2ecc71' : '#555', true);
+  btn(W / 2 + 10, 190, 210, 50, 'Ник', () => { S.footMe = 'cat'; save(); }, footMe() === 'cat' ? '#2ecc71' : '#555', true);
+  btn(W / 2 - 220, 270, 440, 54, 'Матч · 2 минуты', () => startMatch(), '#f39c12');
+  btn(W / 2 - 220, 338, 214, 54, 'Пенальти · 5 ударов', () => startFootball(), '#e67e22');
+  btn(W / 2 + 6, 338, 214, 54, 'Чеканка', () => startJuggle(), '#9b59b6');
+  const pm = penMode(); btn(W / 2 - 220, 462, 440, 36, 'В пенальти: ' + (pm === 'alt' ? 'бью и стою в воротах по очереди' : pm === 'shoot' ? 'только бью' : 'только стою в воротах'), () => { S.penMode = pm === 'alt' ? 'shoot' : pm === 'shoot' ? 'keep' : 'alt'; save(); }, '#555', true);
+  btn(W / 2 - 220, 406, 210, 44, 'Мяч: ' + BALLS[S.ball || 0], () => { S.ball = ((S.ball || 0) + 1) % BALLS.length; save(); }, '#3b82f6', true);
+  btn(W / 2 + 10, 406, 210, 44, 'В главное меню', () => screen = 'menu', '#555', true);
+  const t = performance.now() / 1000; drawBoy(W / 2 - 330, 330, 1.6, { legT: t * 6, mouth: 0.3, blink: Math.floor(t * 2) % 7 === 0 }); drawCatStanding(W / 2 + 330, 330, 1.6, { legT: t * 6, flip: true });
 }
 // ───────────────────────── Ник в форме: стоит на двух лапах ─────────────────────────
 const NICK_KITS = [ // [основной, полосы, шорты, гетры, номер]
@@ -797,32 +853,17 @@ const NICK_KITS = [ // [основной, полосы, шорты, гетры, 
   { n: 'Оранжевая', a: '#ff8c42', b: '#ff8c42', sh: '#fff', so: '#ff8c42', num: '#1d3f8f' }, { n: 'Полоски', a: '#e63946', b: '#fff', sh: '#111', so: '#e63946', num: '#fff' },
   { n: 'Фиолетовая', a: '#6a4fc4', b: '#c6ff4a', sh: '#6a4fc4', so: '#c6ff4a', num: '#c6ff4a' }, { n: 'Мятная', a: '#9af0d2', b: '#9af0d2', sh: '#1b7f86', so: '#9af0d2', num: '#1b7f86' },
 ];
-function drawCatStanding(x, y, s, o = {}) { // Ник как футболист: ноги в гетрах и бутсах, шорты, футболка с номером 17 и NICK, лапы-руки (перчатки у вратаря), голова Ника сверху
-  const K = NICK_KITS[o.kit === undefined ? (S.nickKit || 0) : o.kit], legT = o.legT || 0, t = performance.now() / 1000, fur = '#5a3a22';
-  ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(x, y + 44 * s, 22 * s, 6 * s, 0, 0, 7); ctx.fill();
+function drawCatStanding(x, y, s, o = {}) { // Ник в той же форме, что и Леон: тело рисует drawBoy без головы, сверху голова Ника, сзади хвост, на руках подушечки
+  const t = performance.now() / 1000, fur = '#5a3a22';
+  ctx.save(); ctx.translate(x, y); ctx.scale(o.flip ? -s : s, s); ctx.strokeStyle = fur; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-10, 14); ctx.quadraticCurveTo(-34, 10 + Math.sin(t * 3) * 4, -32, -14 + Math.sin(t * 2) * 3); ctx.stroke(); ctx.restore(); // хвост
+  KIT_NAME = 'NICK'; KIT_NUM = '3'; const skin0 = SKIN; SKIN = fur;
+  drawBoy(x, y, s, { noHead: true, flip: o.flip, legT: o.legT || 0, back: !!o.back, lookObj: Object.assign({}, LOOKS[0], { skin: fur }), outfit: { shirt: 0, shorts: 0, feet: 1, hair: 1, string: 0 }, arm: 0 });
+  KIT_NAME = 'LEON'; KIT_NUM = '17'; SKIN = skin0;
   ctx.save(); ctx.translate(x, y); ctx.scale(o.flip ? -s : s, s);
-  // хвост
-  ctx.strokeStyle = fur; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-12, 8); ctx.quadraticCurveTo(-34, 4 + Math.sin(t * 3) * 4, -30, -16 + Math.sin(t * 2) * 3); ctx.stroke();
-  // ноги: гетры и бутсы
-  for (const sd of [-1, 1]) { const sw = o.dive ? 0 : Math.sin(legT + (sd > 0 ? 0 : Math.PI)) * 6; ctx.fillStyle = K.so; ctx.beginPath(); rr(sd * 7 - 5, 16 + sw * 0.3, 10, 22, 4); ctx.fill(); ctx.fillStyle = '#6a4fc4'; ctx.beginPath(); rr(sd * 7 - 7, 36 + sw * 0.3, 15, 8, 3); ctx.fill(); ctx.fillStyle = '#c6ff4a'; ctx.fillRect(sd * 7 - 7, 42 + sw * 0.3, 15, 2.5); }
-  // шорты и футболка
-  ctx.fillStyle = K.sh; ctx.beginPath(); rr(-15, 6, 30, 14, 5); ctx.fill();
-  ctx.fillStyle = K.a; ctx.beginPath(); rr(-17, -24, 34, 34, 8); ctx.fill(); ctx.fillStyle = K.b; for (let i = -1; i <= 1; i++) ctx.fillRect(i * 11 - 2.5, -24, 5, 34);
-  ctx.fillStyle = K.a; ctx.beginPath(); rr(-26, -22, 11, 12, 4); ctx.fill(); ctx.beginPath(); rr(15, -22, 11, 12, 4); ctx.fill(); // рукава
-  if (o.back) { ctx.fillStyle = K.num; ctx.font = 'bold 7px Arial'; ctx.textAlign = 'center'; ctx.fillText('NICK', 0, -14); ctx.font = 'bold 14px Arial'; ctx.fillText('17', 0, 1); } else { crest(-7, -14, 0.45); sponsorCircle(7, -13, 0.8, 0); }
-  // лапы-руки: у вратаря в перчатках, в прыжке подняты
-  for (const sd of [-1, 1]) { const ax = sd * 24, ay = o.dive ? -34 : -8 + Math.sin(legT + (sd > 0 ? Math.PI : 0)) * 4; ctx.strokeStyle = fur; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(sd * 20, -16); ctx.lineTo(ax, ay); ctx.stroke(); if (o.gloves) { ctx.fillStyle = '#f4f4f4'; ctx.beginPath(); rr(ax - 6, ay - 6, 12, 12, 4); ctx.fill(); ctx.fillStyle = '#e63946'; ctx.fillRect(ax - 6, ay + 3, 12, 3); } else { ctx.fillStyle = '#f6efe3'; ctx.beginPath(); ctx.arc(ax, ay, 4.5, 0, 7); ctx.fill(); } }
-  // голова (чуть ниже, чтобы форма не лезла на лицо)
-  ctx.save(); if (o.flip) ctx.scale(-1, 1); catHead(0, -44, 0.95, o.mood || 'happy'); ctx.restore();
+  for (const side of [-1, 1]) { const hx = side * 24.5, hy = 20; ctx.fillStyle = fur; ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, 7); ctx.fill(); if (o.gloves) { ctx.fillStyle = '#f4f4f4'; ctx.beginPath(); rr(hx - 6, hy - 6, 12, 12, 4); ctx.fill(); ctx.fillStyle = '#e63946'; ctx.fillRect(hx - 6, hy + 3, 12, 3); } else { ctx.fillStyle = '#e9a7b5'; ctx.beginPath(); ctx.arc(hx, hy + 1, 2.4, 0, 7); ctx.fill(); for (const [a, b] of [[-2.6, -2.2], [0, -3.2], [2.6, -2.2]]) { ctx.beginPath(); ctx.arc(hx + a, hy + b, 1, 0, 7); ctx.fill(); } } } // лапы с подушечками (или перчатки вратаря)
+  ctx.fillStyle = fur; ctx.beginPath(); rr(-4, -34, 8, 8, 2); ctx.fill(); // шея
+  ctx.save(); if (o.flip) ctx.scale(-1, 1); catHead(0, -50, 0.62, o.mood || 'happy'); ctx.restore();
   ctx.restore();
-}
-function drawJoy() {
-  if (!TOUCH) { }
-  else if (joy.id !== null) { // джойстик под пальцем
-    const d = Math.min(joy.R, Math.hypot(joy.x - joy.bx, joy.y - joy.by)), a = Math.atan2(joy.y - joy.by, joy.x - joy.bx);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.bx, joy.by, joy.R, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(joy.bx + Math.cos(a) * d, joy.by + Math.sin(a) * d, 36, 0, 7); ctx.fill();
-  } else { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.hx, H - 120, joy.R, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.arc(joy.hx, H - 120, 36, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (const [a, b] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) tri(joy.hx + a * 58 + b * 9, H - 120 + b * 58 + a * 9, joy.hx + a * 58 - b * 9, H - 120 + b * 58 - a * 9, joy.hx + a * 70, H - 120 + b * 70); }
 }
 // ───────────────────────── игра ─────────────────────────
 let screen = 'menu', G = null, msg = [], shake = 0, catEyesOpen = false;
@@ -1361,7 +1402,7 @@ function drawMenu() {
   btn(W / 2 + 4, 460, 136, 38, 'Кухня', () => { kitchenWho = who; screen = 'kitchen'; }, '#e67e22', true);
   btn(W / 2 - 140, 506, 136, 38, 'Гардероб', () => screen = 'wardrobe', '#9b59b6', true);
   btn(W / 2 + 4, 506, 136, 38, 'Миры', () => { openMap(); showWorlds = true; mapScroll = 0; }, '#16a085', true);
-  btn(W / 2 - 140, 550, 280, 36, '⚽ Футбол: Леон против Ника', () => startMatch(), '#f39c12', true);
+  btn(W / 2 - 140, 550, 280, 36, '⚽ Футбол', () => screen = 'fmenu', '#f39c12', true);
   text(VERSION, W - 8, H - 6, 11, '#ffffff99', 'right', false);
   if (H > 620) text('Ник: стрелки · Мальчик: WASD · или держи палец рядом с героем. Тап по Нику — глаза', W / 2, H - 6, 11, '#ffffffbb', 'center', false);
 }
@@ -1456,6 +1497,10 @@ function drawFood(x, y, k, f, s = 1) {
   else if (k === 'pizza') { ctx.fillStyle = f.c; tri(0, -18, -18, 16, 18, 16); ctx.fillStyle = '#d33'; for (const [a, b] of [[-5, 5], [6, 2], [0, 11]]) { ctx.beginPath(); ctx.arc(a, b, 3.5, 0, 7); ctx.fill(); } }
   else if (k === 'banana') { ctx.strokeStyle = f.c; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, -8, 18, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
   else if (k === 'icecream') { ctx.fillStyle = '#e6b36b'; tri(-11, 0, 11, 0, 0, 22); ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(0, -6, 12, 0, 7); ctx.fill(); ctx.fillStyle = '#d33'; ctx.beginPath(); ctx.arc(2, -16, 3, 0, 7); ctx.fill(); }
+  else if (k === 'water') { ctx.fillStyle = '#e8f6ff'; ctx.beginPath(); rr(-9, -16, 18, 32, 5); ctx.fill(); ctx.fillStyle = f.c; ctx.beginPath(); rr(-7, -4, 14, 18, 4); ctx.fill(); ctx.fillStyle = '#3b82f6'; ctx.fillRect(-6, -20, 12, 5); }
+  else if (k === 'meat') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(-2, 0, 18, 12, -0.2, 0, 7); ctx.fill(); ctx.fillStyle = '#f6e7cf'; ctx.beginPath(); ctx.arc(14, -6, 5, 0, 7); ctx.fill(); ctx.fillRect(12, -8, 12, 4); ctx.fillStyle = '#e57373'; ctx.beginPath(); ctx.ellipse(-4, 1, 9, 5, -0.2, 0, 7); ctx.fill(); }
+  else if (k === 'tuna') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(-2, 0, 20, 9, 0, 0, 7); ctx.fill(); tri(14, 0, 28, -9, 28, 9); ctx.fillStyle = '#c9d3df'; ctx.beginPath(); ctx.ellipse(-2, 3, 16, 4, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-12, -2, 2, 0, 7); ctx.fill(); }
+  else if (k === 'yogurt') { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, -12); ctx.lineTo(9, 16); ctx.lineTo(-9, 16); ctx.closePath(); ctx.fill(); ctx.fillStyle = f.c; ctx.fillRect(-11, -6, 22, 10); ctx.fillStyle = '#ff4d6d'; ctx.beginPath(); ctx.arc(0, -1, 3, 0, 7); ctx.fill(); ctx.fillStyle = '#c8c8c8'; ctx.fillRect(-13, -14, 26, 3); }
   else if (k === 'chicken') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(-4, 2, 18, 12, -0.3, 0, 7); ctx.fill(); ctx.fillStyle = '#f6e7cf'; ctx.fillRect(10, -4, 16, 5); ctx.beginPath(); ctx.arc(26, -2, 4, 0, 7); ctx.fill(); }
   else if (k === 'cream') { ctx.fillStyle = '#fff'; ctx.beginPath(); rr(-14, -8, 28, 22, 5); ctx.fill(); ctx.fillStyle = '#3b82f6'; ctx.fillRect(-14, -14, 28, 7); ctx.fillStyle = f.c; ctx.beginPath(); ctx.ellipse(0, -8, 12, 4, 0, 0, 7); ctx.fill(); }
   else if (k === 'apple') { ctx.fillStyle = f.c; ctx.beginPath(); ctx.arc(-6, 2, 13, 0, 7); ctx.arc(6, 2, 13, 0, 7); ctx.fill(); ctx.fillStyle = '#5a3a22'; ctx.fillRect(-1.5, -16, 3, 9); ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(6, -13, 7, 3.5, -0.5, 0, 7); ctx.fill(); }
@@ -1479,12 +1524,12 @@ function drawKitchen() {
   energyBar(80, 450, 240, kitchenWho, kitchenWho === 'cat' ? 'Котик' : 'Мальчик');
   const keysF = Object.keys(FOOD[kitchenWho]);
   keysF.forEach((k, i) => {
-    const f = FOOD[kitchenWho][k], cnt = S.food[kitchenWho + ':' + k] || 0, x = 390 + (i % 3) * 185, y = 160 + Math.floor(i / 3) * 112;
-    panel(x, y, 175, 104, cnt ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)');
-    drawFood(x + 36, y + 46, k, f, 1.0);
-    text(f.n, x + 118, y + 32, 16, cnt ? '#fff' : '#888'); text(`+${f.e}⚡  ×${cnt}`, x + 118, y + 54, 13, cnt ? '#ffd166' : '#777');
-    if (!cnt) btn(x + 70, y + 66, 96, 30, `Купить ₽${f.p}`, () => { if (S.coins >= f.p) { S.coins -= f.p; S.food[kitchenWho + ':' + k] = 1; save(); SFX.coin(); } else say('Не хватает монет — пройди уровень', 660, 170, '#ff6b6b'); }, S.coins >= f.p ? '#3b82f6' : '#6b6b80', true);
-    else btn(x + 70, y + 66, 96, 30, 'Кормить', () => { S.food[kitchenWho + ':' + k]--; S.energy[kitchenWho] = Math.min(MAX_ENERGY, S.energy[kitchenWho] + f.e); save(); SFX.eat(); if (kitchenWho === 'cat') SFX.meow(); say(kitchenWho === 'cat' ? 'Ням! МЯУ!' : 'Ням-ням!', 200, 250, '#7CFC9A'); }, '#e67e22', true);
+    const f = FOOD[kitchenWho][k], cnt = S.food[kitchenWho + ':' + k] || 0, x = 352 + (i % 4) * 150, y = 160 + Math.floor(i / 4) * 112;
+    panel(x, y, 142, 104, cnt ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)');
+    drawFood(x + 30, y + 40, k, f, 0.85);
+    text(f.n, x + 95, y + 30, 14, cnt ? '#fff' : '#888'); text(`+${f.e}⚡ ×${cnt}`, x + 95, y + 50, 12, cnt ? '#ffd166' : '#777');
+    if (!cnt) btn(x + 44, y + 66, 92, 30, `Купить ₽${f.p}`, () => { if (S.coins >= f.p) { S.coins -= f.p; S.food[kitchenWho + ':' + k] = 1; save(); SFX.coin(); } else say('Не хватает монет — пройди уровень', 660, 170, '#ff6b6b'); }, S.coins >= f.p ? '#3b82f6' : '#6b6b80', true);
+    else btn(x + 44, y + 66, 92, 30, 'Кормить', () => { S.food[kitchenWho + ':' + k]--; S.energy[kitchenWho] = Math.min(MAX_ENERGY, S.energy[kitchenWho] + f.e); save(); SFX.eat(); if (kitchenWho === 'cat') SFX.meow(); say(kitchenWho === 'cat' ? 'Ням! МЯУ!' : 'Ням-ням!', 200, 250, '#7CFC9A'); }, '#e67e22', true);
   });
   if (!keysF.some(k => S.food[kitchenWho + ':' + k])) text(`Еды нет — купи за монеты (₽ ${S.coins}) или поймай в уровне`, 660, H - 56, 14, '#ffd166');
   else text(`₽ ${S.coins}`, 660, H - 56, 16, '#ffd700');
@@ -1945,6 +1990,8 @@ function frame(now) {
   else if (screen === 'sandbox') { updateSandbox(dt); drawSandbox(); }
   else if (screen === 'football') { updateFootball(dt); drawFootball(); }
   else if (screen === 'match') { updateMatch(dt); drawMatch(); }
+  else if (screen === 'fmenu') drawFootballMenu();
+  else if (screen === 'juggle') { updateJuggle(dt); drawJuggle(); }
   for (const m of msg) { m.life -= dt; ctx.globalAlpha = clamp(m.life / m.max * 2, 0, 1); text(m.t, m.x, m.y - (1 - m.life / m.max) * 30, 20, m.col); } ctx.globalAlpha = 1; msg = msg.filter(m => m.life > 0);
   requestAnimationFrame(frame);
 }
