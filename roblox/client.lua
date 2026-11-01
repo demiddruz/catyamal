@@ -15,7 +15,7 @@ local function lbl(parent, props) local t = Instance.new("TextLabel"); t.Backgro
 
 -- верхняя панель
 local top = frame({ Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.15, Parent = gui })
-local lvl = lbl(top, { Size = UDim2.new(0.3, 0, 0.6, 0), Position = UDim2.new(0.01, 0, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left, Text = "Мир 1 «Двор» · уровень 1" })
+local lvl = lbl(top, { Size = UDim2.new(0.22, 0, 0.6, 0), Position = UDim2.new(0, 220, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left, Text = "Мир 1 «Двор» · уровень 1" })
 local hearts = lbl(top, { Size = UDim2.new(0.12, 0, 0.6, 0), Position = UDim2.new(0.62, 0, 0.2, 0), Text = "❤❤❤", TextColor3 = Color3.fromRGB(255, 77, 109) })
 local ebg = frame({ Size = UDim2.new(0.12, 0, 0.36, 0), Position = UDim2.new(0.75, 0, 0.32, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.5, Parent = top })
 local ebar = frame({ Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(124, 252, 154), Parent = ebg })
@@ -32,7 +32,7 @@ local taskTxt = lbl(taskBg, { Size = UDim2.new(0.96, 0, 0.8, 0), Position = UDim
 local msg = lbl(gui, { Size = UDim2.new(0.6, 0, 0, 44), Position = UDim2.new(0.2, 0, 0.22, 0), Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0 })
 -- кнопки слева внизу
 local function button(text, color, y, action)
-	local b = Instance.new("TextButton"); b.Size = UDim2.new(0, 120, 0, 62); b.Position = UDim2.new(0, 16, 1, y); b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBlack; b.TextScaled = true; b.Text = text; b.AutoButtonColor = true; b.Parent = gui
+	local b = Instance.new("TextButton"); b.Size = UDim2.new(0, 120, 0, 62); b.Position = UDim2.new(0, 16, 1, y); b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBlack; b.TextScaled = true; b.Text = text; b.AutoButtonColor = true; b.Parent = gui; local st = Instance.new("UIStroke"); st.Thickness = 2; st.Color = Color3.new(1, 1, 1); st.Transparency = 0.4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = b
 	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 12); c.Parent = b
 	b.Activated:Connect(function() remote:FireServer(action) end)
 	return b
@@ -44,7 +44,7 @@ local hint = lbl(gui, { Size = UDim2.new(0, 260, 0, 18), Position = UDim2.new(0,
 if UIS.TouchEnabled and not UIS.KeyboardEnabled then hint.Visible = false end
 
 -- ───────── магазин ─────────
-local shopBtn = Instance.new("TextButton"); shopBtn.Size = UDim2.new(0, 120, 0, 40); shopBtn.Position = UDim2.new(1, -136, 0, 60); shopBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182); shopBtn.TextColor3 = Color3.new(1, 1, 1); shopBtn.Font = Enum.Font.GothamBlack; shopBtn.TextScaled = true; shopBtn.Text = "🛒 МАГАЗИН"; shopBtn.Parent = gui
+local shopBtn = Instance.new("TextButton"); shopBtn.Size = UDim2.new(0, 120, 0, 40); shopBtn.Position = UDim2.new(0, 16, 0, 64); shopBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182); shopBtn.TextColor3 = Color3.new(1, 1, 1); shopBtn.Font = Enum.Font.GothamBlack; shopBtn.TextScaled = true; shopBtn.Text = "🛒 МАГАЗИН"; shopBtn.Parent = gui
 do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = shopBtn end
 local shop = frame({ Size = UDim2.new(0.7, 0, 0.74, 0), Position = UDim2.new(0.15, 0, 0.13, 0), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.05, Visible = false, Parent = gui })
 lbl(shop, { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0.2, 0, 0, 8), Text = "Магазин", TextColor3 = Color3.fromRGB(255, 224, 138) })
@@ -110,7 +110,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local fr = a("Frozen", 0); mtxt.Text = (a("Boss", false) and "БОСС " or "Гусеница ") .. hp .. (fr > 0 and ("   ❄ " .. fr) or ""); mbar.BackgroundColor3 = fr > 0 and Color3.fromRGB(154, 214, 255) or Color3.fromRGB(230, 57, 70)
 	local tt, td, tn = a("TaskText", ""), a("TaskDone", 0), a("TaskNeed", 0); taskTxt.Text = tn > 0 and ("Задание: " .. tt .. "  " .. td .. "/" .. tn) or tt; taskBg.Visible = tt ~= ""
 	local ch = a("Charges", 0); bIce.Text = "ЛЁД ×" .. ch; bShield.Text = "ЩИТ ×" .. ch
-	bIce.BackgroundColor3 = ch > 0 and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(85, 85, 85); bShield.BackgroundColor3 = ch > 0 and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(85, 85, 85)
+	bIce.BackgroundColor3 = ch > 0 and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(70, 74, 90); bShield.BackgroundColor3 = ch > 0 and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(70, 74, 90)
 	local dc = a("DashCd", 0); bDash.Text = dc > 0 and string.format("РЫВОК %.1f", dc) or "РЫВОК"; bDash.BackgroundColor3 = dc > 0 and Color3.fromRGB(85, 85, 85) or Color3.fromRGB(243, 156, 18)
 	revive.Visible = a("CanRevive", false) == true
 	if shop.Visible then for _, f in ipairs(rows) do f() end end
