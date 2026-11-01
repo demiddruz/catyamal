@@ -44,7 +44,7 @@ local function sync()
 	if not G or not G.player then return end
 	local pl, m = G.player, G.cat
 	pl:SetAttribute("Energy", math.floor(G.energy)); pl:SetAttribute("Lives", G.lives); pl:SetAttribute("Charges", G.charges)
-	pl:SetAttribute("Level", G.level); pl:SetAttribute("World", WORLDS[(math.floor((G.level - 1) / 25)) % #WORLDS + 1])
+	pl:SetAttribute("Level", G.level); pl:SetAttribute("World", G.themeName or "Двор")
 	pl:SetAttribute("DashCd", math.ceil(G.dashCd * 10) / 10)
 	if m then pl:SetAttribute("MonsterHP", math.max(0, math.floor(m.hp))); pl:SetAttribute("MonsterMax", m.maxHp); pl:SetAttribute("Frozen", math.ceil(m.frozen)); pl:SetAttribute("Boss", m.boss) end
 	local t = G.task
@@ -222,8 +222,36 @@ end
 
 -- ───────── уровень ─────────
 local function hrpOf() local c = G and G.player and G.player.Character; return c and c:FindFirstChild("HumanoidRootPart"), c and c:FindFirstChildOfClass("Humanoid") end
+-- ───────── арены: каждый уровень своя ─────────
+local THEMES = {
+	{ name = "Двор", floor = { 122, 190, 96 }, fm = "Grass", stripe = { 140, 206, 112 }, hedge = { 58, 130, 54 }, hm = "LeafyGrass", leaves = { 70, 150, 62 }, lm = "LeafyGrass", trunk = { 110, 74, 44 }, clock = 14, fog = { 200, 225, 255 } },
+	{ name = "Пляж", floor = { 240, 220, 156 }, fm = "Sand", stripe = { 228, 205, 140 }, hedge = { 214, 168, 110 }, hm = "Wood", leaves = { 64, 168, 82 }, lm = "Grass", trunk = { 160, 120, 70 }, clock = 12, fog = { 180, 225, 255 } },
+	{ name = "Зима", floor = { 238, 244, 251 }, fm = "Snow", stripe = { 222, 233, 246 }, hedge = { 190, 215, 240 }, hm = "Ice", leaves = { 245, 250, 255 }, lm = "Snow", trunk = { 100, 80, 60 }, clock = 10, fog = { 225, 235, 250 } },
+	{ name = "Пустыня", floor = { 232, 195, 110 }, fm = "Sand", stripe = { 220, 180, 94 }, hedge = { 184, 121, 58 }, hm = "Sandstone", leaves = { 70, 140, 60 }, lm = "Grass", trunk = { 70, 140, 60 }, clock = 16, fog = { 255, 225, 180 } },
+	{ name = "Космос", floor = { 32, 34, 70 }, fm = "SmoothPlastic", stripe = { 44, 48, 96 }, hedge = { 107, 111, 168 }, hm = "Metal", leaves = { 150, 90, 230 }, lm = "Neon", trunk = { 70, 70, 100 }, clock = 0, fog = { 30, 30, 60 } },
+	{ name = "Вулкан", floor = { 74, 48, 48 }, fm = "Basalt", stripe = { 62, 38, 38 }, hedge = { 42, 26, 26 }, hm = "Rock", leaves = { 255, 90, 31 }, lm = "Neon", trunk = { 40, 24, 24 }, clock = 18.5, fog = { 255, 140, 90 } },
+	{ name = "Лес", floor = { 79, 143, 62 }, fm = "Grass", stripe = { 70, 130, 55 }, hedge = { 90, 58, 34 }, hm = "Wood", leaves = { 47, 107, 42 }, lm = "LeafyGrass", trunk = { 90, 58, 34 }, clock = 15, fog = { 170, 210, 170 } },
+	{ name = "Город", floor = { 143, 143, 152 }, fm = "Concrete", stripe = { 128, 128, 138 }, hedge = { 160, 82, 60 }, hm = "Brick", leaves = { 80, 140, 70 }, lm = "Grass", trunk = { 90, 70, 50 }, clock = 13, fog = { 210, 210, 220 } },
+}
+local function applyTheme(level)
+	local T = THEMES[(level - 1) % #THEMES + 1]; G.themeName = T.name
+	local c = function(t) return Color3.fromRGB(t[1], t[2], t[3]) end
+	local A = workspace:FindFirstChild("Arena"); if not A then return end
+	for _, o in ipairs(A:GetDescendants()) do
+		if o:IsA("BasePart") then
+			if o.Name == "Floor" then o.Color = c(T.floor); o.Material = Enum.Material[T.fm]
+			elseif o.Name == "Stripe" then o.Color = c(T.stripe); o.Material = Enum.Material[T.fm]
+			elseif o.Name:sub(1, 5) == "Hedge" then o.Color = c(T.hedge); o.Material = Enum.Material[T.hm]
+			elseif o.Name == "Leaves" or o.Name == "Leaves2" then o.Color = c(T.leaves); o.Material = Enum.Material[T.lm]
+			elseif o.Name == "Trunk" then o.Color = c(T.trunk) end
+		end
+	end
+	local L = game:GetService("Lighting"); L.ClockTime = T.clock; L.Brightness = T.clock < 6 and 1 or 2.5
+	local at = L:FindFirstChildOfClass("Atmosphere"); if at then at.Color = c(T.fog); at.Density = T.clock < 6 and 0.4 or 0.25 end
+end
 local function buildLevel(level)
 	LevelFolder:ClearAllChildren()
+	applyTheme(level)
 	G.level = level; G.zones = {}; G.taskN = 0; G.task = nil; G.charges = (G.passes and G.passes.VIP) and 1 or 0; G.result = nil; G.bitten = false; G.energy = 100; G.lives = (G.passes and G.passes.ExtraHeart) and 4 or 3; G.canRevive = false; G.inv = 2; G.poison = 0; G.dirty = false; G.trapCd = 0
 	local solids = Instance.new("Folder"); solids.Name = "Solids"; solids.Parent = LevelFolder
 	local kinds = kindsFor(level)
@@ -241,7 +269,7 @@ local function buildLevel(level)
 	G.cat = buildCat(level)
 	-- монетки на поле
 	G.coinsOnField = {}
-	for _ = 1, 5 do local p = freeSpot(); local c = P({ Shape = Enum.PartType.Cylinder, Name = "Coin", Size = Vector3.new(0.4, 2.2, 2.2), CFrame = CFrame.new(p + Vector3.new(0, 1.6, 0)), Color = Color3.fromRGB(255, 200, 40), Material = Enum.Material.Metal, CanCollide = false }); table.insert(G.coinsOnField, { pos = p, part = c }) end
+	for _ = 1, 5 do local p = freeSpot(); local c = P({ Shape = Enum.PartType.Cylinder, Name = "Coin", Size = Vector3.new(0.6, 3.6, 3.6), CFrame = CFrame.new(p + Vector3.new(0, 2.2, 0)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 200, 40), Material = Enum.Material.Metal, CanCollide = false }); table.insert(G.coinsOnField, { pos = p, part = c }) end
 	local hrp, hum = hrpOf(); if hrp then hrp.CFrame = CFrame.new(SPAWN) end; if hum then hum.Health = hum.MaxHealth end
 	newTask()
 	say(G.player, (G.cat.boss and "БОСС! Щит спереди — бей лёдом сбоку или сзади" or ("Уровень " .. level .. " — убегай и выполняй задания")))
@@ -328,7 +356,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local now = os.clock()
 	for _, z in ipairs(G.zones) do if z.kind == "laser" then z.on = ((now + z.phase) % 3) < 1.6; z.beam.Transparency = z.on and 0 or 0.85 end end
 	-- монетки на поле
-	for i = #G.coinsOnField, 1, -1 do local c = G.coinsOnField[i]; c.part.CFrame = CFrame.new(c.pos + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(c.pos, ppos) < 3.5 then c.part:Destroy(); table.remove(G.coinsOnField, i); addCoins(1); say(G.player, (G.passes.DoubleCoins and "+2 монеты" or "+1 монета")) end end
+	for i = #G.coinsOnField, 1, -1 do local c = G.coinsOnField[i]; c.part.CFrame = CFrame.new(c.pos + Vector3.new(0, 2.2 + math.sin(now * 3 + c.pos.X) * 0.4, 0)) * CFrame.Angles(0, now * 3, 0); if dxz(c.pos, ppos) < 4 then c.part:Destroy(); table.remove(G.coinsOnField, i); addCoins(1); say(G.player, (G.passes.DoubleCoins and "+2 монеты" or "+1 монета")) end end
 	-- задание
 	local t = G.task
 	if t and not G.result then

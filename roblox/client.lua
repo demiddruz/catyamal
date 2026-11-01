@@ -9,42 +9,61 @@ local shopFn = RS:WaitForChild("ShopAction")
 local MPS = game:GetService("MarketplaceService")
 local Config = require(RS:WaitForChild("ShopConfig"))
 
-local gui = Instance.new("ScreenGui"); gui.Name = "CatGameUI"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Parent = plr:WaitForChild("PlayerGui")
+local gui = Instance.new("ScreenGui"); gui.Name = "CatGameUI"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = false; gui.Parent = plr:WaitForChild("PlayerGui")
 local function frame(props) local f = Instance.new("Frame"); f.BorderSizePixel = 0; for k, v in pairs(props) do f[k] = v end; local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = f; return f end
 local function lbl(parent, props) local t = Instance.new("TextLabel"); t.BackgroundTransparency = 1; t.Font = Enum.Font.GothamBold; t.TextColor3 = Color3.new(1, 1, 1); t.TextScaled = true; t.TextStrokeTransparency = 0.6; for k, v in pairs(props) do t[k] = v end; t.Parent = parent; return t end
 
 -- верхняя панель
-local top = frame({ Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.15, Parent = gui })
-local lvl = lbl(top, { Size = UDim2.new(0.22, 0, 0.6, 0), Position = UDim2.new(0, 220, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left, Text = "Мир 1 «Двор» · уровень 1" })
-local hearts = lbl(top, { Size = UDim2.new(0.12, 0, 0.6, 0), Position = UDim2.new(0.62, 0, 0.2, 0), Text = "❤❤❤", TextColor3 = Color3.fromRGB(255, 77, 109) })
-local ebg = frame({ Size = UDim2.new(0.12, 0, 0.36, 0), Position = UDim2.new(0.75, 0, 0.32, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.5, Parent = top })
+local top = frame({ Size = UDim2.new(1, -16, 0, 46), Position = UDim2.new(0, 8, 0, 4), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.15, Parent = gui })
+local lvl = lbl(top, { Size = UDim2.new(0.24, 0, 0.6, 0), Position = UDim2.new(0.015, 0, 0.2, 0), TextXAlignment = Enum.TextXAlignment.Left, Text = "Мир 1 «Двор» · уровень 1" })
+local hearts = lbl(top, { Size = UDim2.new(0.1, 0, 0.6, 0), Position = UDim2.new(0.56, 0, 0.2, 0), Text = "❤❤❤", TextColor3 = Color3.fromRGB(255, 77, 109) })
+local ebg = frame({ Size = UDim2.new(0.11, 0, 0.42, 0), Position = UDim2.new(0.67, 0, 0.29, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.5, Parent = top })
 local ebar = frame({ Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(124, 252, 154), Parent = ebg })
 local etxt = lbl(ebg, { Size = UDim2.fromScale(1, 1), Text = "⚡ 100", TextColor3 = Color3.fromRGB(10, 40, 20), TextStrokeTransparency = 1 })
-local coins = lbl(top, { Size = UDim2.new(0.1, 0, 0.6, 0), Position = UDim2.new(0.89, 0, 0.2, 0), Text = "₽ 0", TextColor3 = Color3.fromRGB(255, 215, 0) })
+local coins = lbl(top, { Size = UDim2.new(0.08, 0, 0.6, 0), Position = UDim2.new(0.785, 0, 0.2, 0), Text = "₽ 0", TextColor3 = Color3.fromRGB(255, 215, 0) })
 -- здоровье гусеницы
-local mbg = frame({ Size = UDim2.new(0.26, 0, 0, 22), Position = UDim2.new(0.33, 0, 0, 15), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.4, Parent = gui })
+local mbg = frame({ Size = UDim2.new(0.26, 0, 0, 22), Position = UDim2.new(0.275, 0, 0, 16), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.4, Parent = gui })
 local mbar = frame({ Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(230, 57, 70), Parent = mbg })
 local mtxt = lbl(mbg, { Size = UDim2.fromScale(1, 1), Text = "Гусеница" })
 -- задание внизу
-local taskBg = frame({ Size = UDim2.new(0.5, 0, 0, 46), Position = UDim2.new(0.25, 0, 1, -62), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.45, Parent = gui })
+local taskBg = frame({ Size = UDim2.new(0.46, 0, 0, 42), Position = UDim2.new(0.27, 0, 1, -54), BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.45, Parent = gui })
 local taskTxt = lbl(taskBg, { Size = UDim2.new(0.96, 0, 0.8, 0), Position = UDim2.new(0.02, 0, 0.1, 0), Text = "", TextColor3 = Color3.fromRGB(255, 224, 138) })
 -- сообщение по центру
 local msg = lbl(gui, { Size = UDim2.new(0.6, 0, 0, 44), Position = UDim2.new(0.2, 0, 0.22, 0), Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0 })
 -- кнопки слева внизу
 local function button(text, color, y, action)
-	local b = Instance.new("TextButton"); b.Size = UDim2.new(0, 120, 0, 62); b.Position = UDim2.new(0, 16, 1, y); b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBlack; b.TextScaled = true; b.Text = text; b.AutoButtonColor = true; b.Parent = gui; local st = Instance.new("UIStroke"); st.Thickness = 2; st.Color = Color3.new(1, 1, 1); st.Transparency = 0.4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = b
-	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 12); c.Parent = b
+	local b = Instance.new("TextButton"); b.Size = UDim2.new(0, 84, 0, 84); b.AnchorPoint = Vector2.new(0.5, 0.5); b.Position = UDim2.new(1, -60, 1, y); b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBlack; b.TextScaled = true; b.Text = text; b.AutoButtonColor = true; b.Parent = gui; local st = Instance.new("UIStroke"); st.Thickness = 2; st.Color = Color3.new(1, 1, 1); st.Transparency = 0.4; st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; st.Parent = b
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(1, 0); c.Parent = b
 	b.Activated:Connect(function() remote:FireServer(action) end)
 	return b
 end
 local bIce = button("ЛЁД", Color3.fromRGB(59, 130, 246), -230, "ice")
 local bShield = button("ЩИТ", Color3.fromRGB(46, 204, 113), -160, "shield")
 local bDash = button("РЫВОК", Color3.fromRGB(243, 156, 18), -90, "dash")
-local hint = lbl(gui, { Size = UDim2.new(0, 260, 0, 18), Position = UDim2.new(0, 146, 1, -86), Text = "E — лёд · Q — щит · R — рывок", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 230, 230) })
-if UIS.TouchEnabled and not UIS.KeyboardEnabled then hint.Visible = false end
+-- раскладка кнопок: на телефоне полукругом вокруг кнопки прыжка, на компьютере столбиком справа внизу
+local isTouch = UIS.TouchEnabled and not UIS.KeyboardEnabled
+local function layoutButtons()
+	local vp = workspace.CurrentCamera.ViewportSize
+	local jump = plr.PlayerGui:FindFirstChild("TouchGui") and plr.PlayerGui.TouchGui:FindFirstChild("JumpButton", true)
+	if isTouch and jump and jump.AbsoluteSize.X > 0 then
+		local js = jump.AbsoluteSize.X; local inset = game:GetService("GuiService"):GetGuiInset()
+		local cx, cy = jump.AbsolutePosition.X + js / 2, jump.AbsolutePosition.Y + js / 2 - inset.Y
+		local size = math.floor(js * 0.82); local R = js * 1.05
+		for i, b in ipairs({ bDash, bShield, bIce }) do
+			local ang = math.rad(180 + (i - 1) * 45) -- слева, слева-сверху, сверху от прыжка
+			b.Size = UDim2.new(0, size, 0, size); b.Position = UDim2.new(0, cx + math.cos(ang) * R, 0, cy + math.sin(ang) * R)
+		end
+	else
+		local size = 84
+		for i, b in ipairs({ bDash, bShield, bIce }) do b.Size = UDim2.new(0, size, 0, size); b.Position = UDim2.new(1, -64, 1, -70 - (i - 1) * 96) end
+	end
+end
+local hint = lbl(gui, { Size = UDim2.new(0, 260, 0, 18), Position = UDim2.new(1, -380, 1, -30), Text = "E — лёд · Q — щит · R — рывок", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 230, 230) })
+if isTouch then hint.Visible = false end
+layoutButtons(); workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layoutButtons); task.delay(2, layoutButtons); task.delay(5, layoutButtons)
 
 -- ───────── магазин ─────────
-local shopBtn = Instance.new("TextButton"); shopBtn.Size = UDim2.new(0, 120, 0, 40); shopBtn.Position = UDim2.new(0, 16, 0, 64); shopBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182); shopBtn.TextColor3 = Color3.new(1, 1, 1); shopBtn.Font = Enum.Font.GothamBlack; shopBtn.TextScaled = true; shopBtn.Text = "🛒 МАГАЗИН"; shopBtn.Parent = gui
+local shopBtn = Instance.new("TextButton"); shopBtn.Size = UDim2.new(0.115, 0, 0, 36); shopBtn.Position = UDim2.new(0.877, 0, 0, 9); shopBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182); shopBtn.TextColor3 = Color3.new(1, 1, 1); shopBtn.Font = Enum.Font.GothamBlack; shopBtn.TextScaled = true; shopBtn.Text = "🛒 МАГАЗИН"; shopBtn.Parent = top
 do local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 10); c.Parent = shopBtn end
 local shop = frame({ Size = UDim2.new(0.7, 0, 0.74, 0), Position = UDim2.new(0.15, 0, 0.13, 0), BackgroundColor3 = Color3.fromRGB(20, 24, 48), BackgroundTransparency = 0.05, Visible = false, Parent = gui })
 lbl(shop, { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0.2, 0, 0, 8), Text = "Магазин", TextColor3 = Color3.fromRGB(255, 224, 138) })
@@ -119,5 +138,5 @@ RunService.RenderStepped:Connect(function(dt)
 	-- камера сверху под углом, как в веб-версии
 	local char = plr.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
 	local cam = workspace.CurrentCamera
-	if hrp then cam.CameraType = Enum.CameraType.Scriptable; local target = hrp.Position; cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(target + Vector3.new(0, 58, 34), target), math.clamp(dt * 6, 0, 1)) end
+	if hrp then cam.CameraType = Enum.CameraType.Scriptable; local target = hrp.Position; local off = isTouch and Vector3.new(0, 38, 24) or Vector3.new(0, 48, 30); cam.CFrame = cam.CFrame:Lerp(CFrame.lookAt(target + off, target), math.clamp(dt * 6, 0, 1)) end
 end)
